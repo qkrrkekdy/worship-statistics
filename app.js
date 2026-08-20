@@ -8,6 +8,7 @@ if (localStorage.getItem('attendance-reset-version') !== attendanceResetVersion)
   localStorage.setItem('attendance-reset-version', attendanceResetVersion);
 }
 let imported = { sundayRecords: [], dawnRecords: [], importedAt: null };
+let supabaseClient = null;
 let custom = JSON.parse(localStorage.getItem('attendance-custom') || '[]');
 let deleted = JSON.parse(localStorage.getItem('attendance-deleted') || '[]');
 const march29CorrectionVersion = '2026-03-29-weekday-import-v1';
@@ -42,7 +43,7 @@ function baseRecords(type) {
   const source = type === 'sunday' ? imported.sundayRecords : imported.dawnRecords;
   const normalized=source.map((item) => type === 'sunday'
     ? ({ id:item.id, type, date:item.date, year:item.year, month:item.month, onsite:item.onsite||0, onsite1:item.onsite1??item.onsite??0, onsite2:item.onsite2??0, online:item.online||0, online1:item.online1??item.online??0, online2:item.online2??0, school:item.school||0, schoolTeachers:item.schoolTeachers||0, schoolLegacy:item.schoolLegacy||0, seed:item.seed||0, sprout:item.sprout||0, spring:item.spring||0, vision1:item.vision1||0, vision2:item.vision2||0, youth:item.youth||0, schoolAfternoon:item.schoolAfternoon||0, teacherSeed:item.teacherSeed||0,teacherSprout:item.teacherSprout||0,teacherSpring:item.teacherSpring||0,teacherVision1:item.teacherVision1||0,teacherVision2:item.teacherVision2||0,teacherYouth:item.teacherYouth||0,teacherSchoolAfternoon:item.teacherSchoolAfternoon||0, afternoon:item.afternoon||0, afternoonOnline:item.afternoonOnline||0, cellGroup:item.cellGroup||0, wednesdayOnsite:item.wednesdayOnsite||0, wednesdayOnline:item.wednesdayOnline||0, dawnWeeklyOnsite:item.dawnWeeklyOnsite||0, dawnWeeklyOnline:item.dawnWeeklyOnline||0, weekdayTotal:item.weekdayTotal||0, weeklyGrandTotal:item.weeklyGrandTotal||0, total:item.total, note:item.note||'', source:item.source||'excel' })
-    : ({ id:item.id, type, date:item.date, year:item.year, month:item.month, onsite:item.first||0, online:item.second||0, school:0, afternoon:0, afternoonOnline:0, total:item.total, note:'', source:'excel' }));
+    : ({ id:item.id, type, date:item.date, year:item.year, month:item.month, onsite:item.first||0, online:item.second||0, school:0, afternoon:0, afternoonOnline:0, total:item.total, note:item.note||'', source:item.source||'migration' }));
   if(type==='sunday'){
     const map=new Map(normalized.map(item=>[item.date,item]));
     supplementalSundayRecords.forEach(item=>map.set(item.date,item));
@@ -63,6 +64,60 @@ function records(type) {
   return [...map.values()].sort((a,b) => a.date.localeCompare(b.date));
 }
 function saveLocal() { localStorage.setItem('attendance-custom',JSON.stringify(custom)); localStorage.setItem('attendance-deleted',JSON.stringify(deleted)); }
+
+function mapSupabaseSunday(row) {
+  return {
+    id:`supabase-sunday-${row.id}`, date:row.worship_date, year:row.year, month:row.month, week:row.week,
+    onsite1:row.onsite1||0, online1:row.online1||0, onsite2:row.onsite2||0, online2:row.online2||0,
+    onsite:row.onsite||0, online:row.online||0, afternoon:row.afternoon||0, afternoonOnline:row.afternoon_online||0,
+    seed:row.seed||0, sprout:row.sprout||0, spring:row.spring||0, vision1:row.vision1||0,
+    vision2:row.vision2||0, youth:row.youth||0, schoolAfternoon:row.school_afternoon||0,
+    teacherSeed:row.teacher_seed||0, teacherSprout:row.teacher_sprout||0, teacherSpring:row.teacher_spring||0,
+    teacherVision1:row.teacher_vision1||0, teacherVision2:row.teacher_vision2||0, teacherYouth:row.teacher_youth||0,
+    teacherSchoolAfternoon:row.teacher_school_afternoon||0, school:row.school||0,
+    schoolTeachers:row.school_teachers||0, schoolLegacy:row.school_legacy||0,
+    cellGroup:row.cell_group||0, wednesdayOnsite:row.wednesday_onsite||0, wednesdayOnline:row.wednesday_online||0,
+    dawnWeeklyOnsite:row.dawn_weekly_onsite||0, dawnWeeklyOnline:row.dawn_weekly_online||0,
+    weekdayTotal:row.weekday_total||0, total:row.total||0, weeklyGrandTotal:row.weekly_grand_total||0,
+    note:row.note||'', source:row.source||'migration'
+  };
+}
+
+function mapSupabaseDawn(row) {
+  return {
+    id:`supabase-dawn-${row.id}`, date:row.worship_date, year:row.year, month:row.month, week:row.week,
+    first:row.onsite||0, second:row.online||0, total:row.total||0,
+    note:row.note||'', source:row.source||'migration'
+  };
+}
+
+async function fetchAllSupabaseRows(table) {
+  const pageSize=1000, rows=[];
+  for(let from=0;;from+=pageSize){
+    const {data,error}=await supabaseClient.from(table).select('*').order('worship_date',{ascending:true}).range(from,from+pageSize-1);
+    if(error) throw new Error(`${table} 조회 실패: ${error.message}`);
+    rows.push(...data);
+    if(data.length<pageSize) return rows;
+  }
+}
+
+async function loadAttendanceFromSupabase() {
+  const config=window.WORSHIP_SUPABASE_CONFIG;
+  if(!config?.url||!config?.publishableKey) throw new Error('Supabase 공개 연결 설정이 없습니다.');
+  if(!window.supabase?.createClient) throw new Error('Supabase JavaScript 라이브러리를 불러오지 못했습니다.');
+  supabaseClient=window.supabase.createClient(config.url,config.publishableKey,{
+    auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}
+  });
+  const [sundayRows,dawnRows]=await Promise.all([
+    fetchAllSupabaseRows('sunday_attendance'),
+    fetchAllSupabaseRows('dawn_attendance')
+  ]);
+  imported={
+    sundayRecords:sundayRows.map(mapSupabaseSunday),
+    dawnRecords:dawnRows.map(mapSupabaseDawn),
+    importedAt:new Date().toISOString()
+  };
+}
 function yearsAvailable() {
   const years = new Set([currentYear]);
   [...records('sunday'),...records('dawn')].forEach((item) => years.add(item.year));
@@ -370,4 +425,4 @@ function drawGrouped(id,sets,cutoff,overlayLines=false){
 }
 
 window.addEventListener('resize',()=>{clearTimeout(window.resizeTimer);window.resizeTimer=setTimeout(()=>renderPage(document.querySelector('.page.active')?.id),150)});
-fetch('/data/worship-data.json').then(r=>r.json()).then(data=>{imported=data;populateFilters();const initial=location.hash.slice(1)||settings.defaultPage||'dashboard';showPage($(initial)?initial:'dashboard')}).catch(error=>{console.error(error);populateFilters();showPage('dashboard')});
+loadAttendanceFromSupabase().then(()=>{populateFilters();const initial=location.hash.slice(1)||settings.defaultPage||'dashboard';showPage($(initial)?initial:'dashboard')}).catch(error=>{console.error(error);populateFilters();showPage('dashboard')});

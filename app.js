@@ -370,4 +370,4 @@ function drawGrouped(id,sets,cutoff,overlayLines=false){
 }
 
 window.addEventListener('resize',()=>{clearTimeout(window.resizeTimer);window.resizeTimer=setTimeout(()=>renderPage(document.querySelector('.page.active')?.id),150)});
-fetch('/data/worship-data.json').then(r=>r.json()).then(data=>{imported=data;populateFilters();const initial=location.hash.slice(1)||settings.defaultPage||'dashboard';showPage($(initial)?initial:'dashboard')}).catch(error=>{console.error(error);populateFilters();showPage('dashboard')});
+fetch('./data/worship-data.json').then(r=>r.json()).then(data=>{imported=data;populateFilters();const initial=location.hash.slice(1)||settings.defaultPage||'dashboard';showPage($(initial)?initial:'dashboard')}).catch(error=>{console.error(error);populateFilters();showPage('dashboard')});

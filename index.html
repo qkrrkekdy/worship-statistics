@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#234b40">
+  <title>인천중앙교회 예배 현황</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <aside class="sidebar">
+    <button class="brand" type="button" data-page="dashboard"><span>✦</span><strong>인천중앙교회</strong><small>예배 출석 관리</small></button>
+    <nav class="main-nav" aria-label="주요 메뉴">
+      <button class="active" data-page="dashboard"><span>▦</span>메인보드</button>
+      <button data-page="monthly"><span>▣</span>월별 현황</button>
+      <button data-page="yearly"><span>▤</span>연도별 현황</button>
+      <button data-page="compare"><span>⇄</span>비교분석</button>
+      <button data-page="entry"><span>＋</span>출석입력</button>
+    </nav>
+  </aside>
+
+  <main class="main-content">
+    <section id="dashboard" class="page active">
+      <div class="page-title"><div><p class="eyebrow">WORSHIP DASHBOARD</p><h1>메인보드</h1><p>2022년부터 현재까지의 예배 출석 흐름입니다.</p></div><span id="dashboard-period" class="period-badge"></span></div>
+      <div class="dashboard-summary metric-cards dashboard-kpis">
+        <article class="latest-sunday-card"><span>최근 주일 낮예배</span><div class="latest-sunday-values"><div><small>현장</small><strong id="dashboard-latest-sunday-onsite">—</strong></div><div><small>온라인</small><strong id="dashboard-latest-sunday-online">—</strong></div><div><small>합계</small><strong id="dashboard-latest-sunday">—</strong></div></div><small id="dashboard-latest-sunday-date">—</small></article>
+        <article class="year-sunday-card"><span>최근 주일 낮예배 부별 현황</span><div class="year-sunday-values"><div><small>1부 현장</small><strong id="dashboard-year-sunday-onsite1">—</strong></div><div><small>1부 온라인</small><strong id="dashboard-year-sunday-online1">—</strong></div><div class="service-total"><small>1부 합계</small><strong id="dashboard-year-sunday-total1">—</strong></div><div><small>2부 현장</small><strong id="dashboard-year-sunday-onsite2">—</strong></div><div><small>2부 온라인</small><strong id="dashboard-year-sunday-online2">—</strong></div><div class="service-total"><small>2부 합계</small><strong id="dashboard-year-sunday-total2">—</strong></div></div><small id="dashboard-year-sunday-period">—</small></article>
+        <article class="latest-dawn-card"><span>최근 새벽예배 6일 현장 / 온라인</span><div class="dawn-value-legend">현장 <b>/</b> 온라인</div><div id="dashboard-latest-dawn-week" class="latest-dawn-values"></div><small id="dashboard-year-dawn-period">—</small></article>
+      </div>
+      <p class="summary-basis">아래 증감은 각 연도에 입력된 전체 기간의 평균을 바로 전년도 평균과 비교한 값입니다.</p>
+      <div class="annual-tables">
+        <article class="panel"><h2>연도별 주일예배 출석 요약 <small>(낮·오후·교회학교 합계)</small></h2><div class="table-wrap"><table><thead><tr><th>연도</th><th>평균 출석</th><th>전년 대비</th><th>증감률</th></tr></thead><tbody id="dash-sunday-years"></tbody></table></div></article>
+        <article class="panel"><h2>연도별 새벽예배 출석 요약</h2><div class="table-wrap"><table><thead><tr><th>연도</th><th>현장 평균</th><th>온라인 평균</th><th>합계 평균</th><th>전년 대비</th><th>증감률</th></tr></thead><tbody id="dash-dawn-years"></tbody></table></div></article>
+      </div>
+      <article class="panel chart-panel"><div><p class="eyebrow">SUNDAY DAY WORSHIP</p><h2>주일 낮예배 연도별 월평균 추이</h2><p class="chart-description">1·2부 현장과 온라인을 합산한 월평균 추이입니다.</p></div><div class="chart"><canvas id="dashboard-sunday-chart"></canvas></div></article>
+      <article class="panel chart-panel"><div><p class="eyebrow">SUNDAY AFTERNOON WORSHIP</p><h2>오후예배 연도별 월평균 추이</h2><p class="chart-description">오후예배 현장과 온라인을 합산한 월평균 추이입니다.</p></div><div class="chart"><canvas id="dashboard-afternoon-chart"></canvas></div></article>
+      <article class="panel chart-panel"><div><p class="eyebrow">DAWN WORSHIP</p><h2>새벽예배 연도별 월평균 추이</h2><p class="chart-description">겹치는 수치는 위치를 자동 조정하며, 마지막 지점에서 연도와 수치를 확인할 수 있습니다.</p></div><div class="chart"><canvas id="dashboard-dawn-chart"></canvas></div></article>
+      <article class="panel chart-panel"><div><p class="eyebrow">WEDNESDAY WORSHIP</p><h2>수요예배 연도별 월평균 추이</h2><p class="chart-description">수요예배 현장과 온라인을 합산한 월평균 추이입니다.</p></div><div class="chart"><canvas id="dashboard-wednesday-chart"></canvas></div></article>
+    </section>
+
+    <section id="entry" class="page">
+      <div class="page-title"><div><p class="eyebrow">ATTENDANCE ENTRY</p><h1>출석입력</h1><p>예배 출석을 입력하고 수정하거나 삭제할 수 있습니다.</p></div></div>
+      <div class="type-tabs"><button class="active" data-entry-type="sunday">주일예배</button><button data-entry-type="dawn">새벽예배</button></div>
+      <article class="panel entry-panel">
+        <form id="attendance-form">
+          <input type="hidden" name="originalKey">
+          <input type="hidden" name="schoolLegacy" value="0">
+          <label>날짜<input type="date" name="date" required></label>
+          <div class="entry-group" data-entry-for="sunday"><strong>주일 낮예배</strong><label>1부 현장<input type="number" name="onsite1" min="0"></label><label>1부 온라인<input type="number" name="online1" min="0"></label><label>2부 현장<input type="number" name="onsite2" min="0"></label><label>2부 온라인<input type="number" name="online2" min="0"></label></div>
+          <div class="entry-group" data-entry-for="sunday"><strong>오후예배</strong><label>현장<input type="number" name="afternoon" min="0"></label><label>온라인<input type="number" name="afternoonOnline" min="0"></label></div>
+          <div class="entry-group school-entry-group" data-entry-for="sunday"><strong>교회학교 학생</strong><label>씨앗 학생<input type="number" name="seed" min="0"></label><label>새싹 학생<input type="number" name="sprout" min="0"></label><label>새봄 학생<input type="number" name="spring" min="0"></label><label>비전1 학생<input type="number" name="vision1" min="0"></label><label>비전2 학생<input type="number" name="vision2" min="0"></label><label>젊은이 학생<input type="number" name="youth" min="0"></label><label>어린이오후예배 학생<input type="number" name="schoolAfternoon" min="0"></label><strong>교회학교 교사</strong><label>씨앗 교사<input type="number" name="teacherSeed" min="0"></label><label>새싹 교사<input type="number" name="teacherSprout" min="0"></label><label>새봄 교사<input type="number" name="teacherSpring" min="0"></label><label>비전1 교사<input type="number" name="teacherVision1" min="0"></label><label>비전2 교사<input type="number" name="teacherVision2" min="0"></label><label>젊은이 교사 (입력 안 함)<input type="number" name="teacherYouth" value="0" disabled></label><label>어린이오후예배 교사<input type="number" name="teacherSchoolAfternoon" min="0"></label></div>
+          <div class="entry-group" data-entry-for="sunday"><strong>주중예배</strong><label>속회<input type="number" name="cellGroup" min="0"></label><label>수요 현장<input type="number" name="wednesdayOnsite" min="0"></label><label>수요 온라인<input type="number" name="wednesdayOnline" min="0"></label></div>
+          <div class="entry-group" data-entry-for="dawn" hidden><strong>새벽예배</strong><label>현장<input type="number" name="onsite" min="0"></label><label>온라인<input type="number" name="online" min="0"></label></div>
+          <label class="note-field">비고<input type="text" name="note" maxlength="200" placeholder="특별예배 등 필요한 내용을 입력하세요"></label>
+          <div class="form-actions"><button class="secondary-button" id="cancel-edit" type="button" hidden>취소</button><button class="primary-button" type="submit">저장</button></div>
+        </form>
+        <p id="entry-message" class="form-message" role="status"></p>
+      </article>
+      <article class="panel"><div class="panel-heading"><h2 id="entry-list-title">주일예배 입력 내역</h2><div class="entry-list-controls"><label class="filter">연도<select id="entry-year"></select></label><label class="filter">월<select id="entry-month"></select></label><span id="entry-count"></span></div></div><div class="table-wrap"><table><thead id="entry-record-head"></thead><tbody id="entry-records"></tbody></table></div></article>
+    </section>
+
+    <section id="yearly" class="page">
+      <div class="page-title"><div><p class="eyebrow">YEARLY REPORT</p><h1>연도별 현황</h1><p>선택한 연도의 주요 통계와 날짜별 기록입니다.</p></div><label class="filter">연도<select id="yearly-year"></select></label></div>
+      <div class="summary-grid five"><article><span>주일예배 현장 평균</span><strong id="year-onsite-average">—</strong></article><article><span>주일예배 온라인 평균</span><strong id="year-online-average">—</strong></article><article><span>오후예배 평균</span><strong id="year-afternoon-average">—</strong></article><article><span>오후 온라인 평균</span><strong id="year-afternoon-online-average">—</strong></article><article><span>교회학교 평균</span><strong id="year-school-average">—</strong></article></div>
+      <div class="yearly-chart-grid">
+        <article class="panel chart-panel"><h2>주일예배 현장 월평균</h2><div class="chart small"><canvas id="yearly-onsite-chart"></canvas></div></article>
+        <article class="panel chart-panel"><h2>주일예배 온라인 월평균</h2><div class="chart small"><canvas id="yearly-online-chart"></canvas></div></article>
+        <article class="panel chart-panel"><h2>오후예배 월평균</h2><div class="chart small"><canvas id="yearly-afternoon-chart"></canvas></div></article>
+        <article class="panel chart-panel"><h2>오후 온라인 월평균</h2><div class="chart small"><canvas id="yearly-afternoon-online-chart"></canvas></div></article>
+        <article class="panel chart-panel full"><h2>교회학교 월평균</h2><div class="chart small"><canvas id="yearly-school-chart"></canvas></div></article>
+      </div>
+      <article class="panel"><div class="panel-heading"><h2>날짜별 출석 목록</h2><strong id="yearly-highest-attendance">—</strong></div><div class="table-wrap vertical-records"><table id="yearly-vertical-table"><thead id="yearly-record-head"></thead><tbody id="yearly-records"></tbody></table></div></article>
+    </section>
+
+    <section id="compare" class="page">
+      <div class="page-title"><div><p class="eyebrow">COMPARISON</p><h1>비교분석</h1><p>여러 연도의 평균과 같은 기간의 변화량을 비교합니다.</p></div></div>
+      <article class="panel compare-options">
+        <div><span class="control-label">비교 연도</span><div id="compare-years" class="year-checks"></div></div>
+        <label class="same-period"><input id="same-period" type="checkbox" checked> 가장 최근 연도의 마지막 기록과 동일한 기간까지만 비교</label>
+      </article>
+      <div id="comparison-delta" class="comparison-delta"></div>
+      <article class="panel"><h2>A. 모든 예배 연도별 평균 비교</h2><div class="table-wrap"><table class="detail-comparison-table"><thead><tr><th rowspan="2">연도</th><th rowspan="2">비교 기간</th><th colspan="6">주일예배 평균</th><th colspan="3">새벽예배 평균</th></tr><tr><th>현장</th><th>온라인</th><th>오후</th><th>오후 온라인</th><th>교회학교</th><th>합계</th><th>현장</th><th>온라인</th><th>합계</th></tr></thead><tbody id="comparison-table"></tbody></table></div></article>
+      <article class="panel chart-panel comparison-monthly-panel"><div class="panel-heading"><div><h2>B. 세부 항목 월별 비교</h2><p id="comparison-chart-description" class="chart-description"></p></div><label class="filter">비교 항목<select id="comparison-metric"><option value="sunday-onsite">주일 현장</option><option value="sunday-online">주일 온라인</option><option value="sunday-afternoon">주일 오후</option><option value="sunday-afternoonOnline">주일 오후 온라인</option><option value="sunday-school">교회학교</option><option value="sunday-total">주일 합계</option><option value="dawn-onsite">새벽 현장</option><option value="dawn-online">새벽 온라인</option><option value="dawn-total">새벽 합계</option></select></label></div><div class="chart tall"><canvas id="comparison-chart"></canvas></div><div class="table-wrap comparison-monthly-wrap"><table class="comparison-monthly-table"><thead id="comparison-monthly-head"></thead><tbody id="comparison-monthly-body"></tbody></table></div></article>
+    </section>
+
+    <section id="monthly" class="page">
+      <div class="page-title"><div><p class="eyebrow">MONTHLY REPORT</p><h1>월별 현황</h1><p>선택한 달의 모든 예배 출석을 확인합니다.</p></div><div class="inline-filters"><label class="filter">연도<select id="monthly-year"></select></label><label class="filter">월<select id="monthly-month"></select></label></div></div>
+      <h2 id="monthly-report-title" class="monthly-report-title"></h2>
+      <article class="panel monthly-sheet"><div class="panel-heading"><div><p class="eyebrow">SUNDAY WORSHIP</p><h2>주일예배 월간 출석표</h2></div></div><div class="table-wrap"><table class="monthly-matrix"><colgroup id="monthly-sunday-columns"></colgroup><thead id="monthly-sunday-head"></thead><tbody id="monthly-sunday-records"></tbody></table></div></article>
+      <article class="panel monthly-sheet"><div class="panel-heading"><div><p class="eyebrow">CHURCH SCHOOL</p><h2>교회학교 교사·학생 출석표</h2></div><strong id="monthly-school-average">—</strong></div><div class="table-wrap"><table class="monthly-matrix school-matrix"><colgroup id="monthly-school-columns"></colgroup><thead id="monthly-school-head"></thead><tbody id="monthly-school-records"></tbody></table></div></article>
+      <article class="panel monthly-sheet"><div class="panel-heading"><div><p class="eyebrow">DAWN WORSHIP</p><h2>새벽예배 월간 출석표</h2></div><strong id="monthly-dawn-average">—</strong></div><div class="dawn-table"><div class="table-wrap"><table class="monthly-matrix dawn-matrix"><colgroup id="monthly-dawn-columns"></colgroup><thead id="monthly-dawn-head"></thead><tbody id="monthly-dawn-records"></tbody></table></div></div></article>
+    </section>
+
+    <section id="report" class="page">
+      <div class="page-title"><div><p class="eyebrow">REPORT</p><h1>보고서</h1><p>필요한 기간의 출석자료를 조회하고 파일로 저장합니다.</p></div><button class="secondary-button" type="button" data-page="monthly">월별 현황 보기</button></div>
+      <article class="panel report-controls"><label class="filter">예배<select id="report-type"><option value="sunday">주일예배</option><option value="dawn">새벽예배</option></select></label><label class="filter">연도<select id="report-year"></select></label><button id="download-csv" class="primary-button" type="button">CSV 다운로드</button><button id="print-report" class="secondary-button" type="button">인쇄</button></article>
+      <article class="panel"><div class="panel-heading"><h2>출석 보고서</h2><strong id="report-average"></strong></div><div class="table-wrap"><table><thead><tr><th>날짜</th><th>출석인원</th><th>비고</th></tr></thead><tbody id="report-records"></tbody></table></div></article>
+    </section>
+
+    <section id="import" class="page">
+      <div class="page-title"><div><p class="eyebrow">DATA IMPORT</p><h1>자료 가져오기</h1><p>기존 엑셀에서 가져온 데이터의 상태를 확인합니다.</p></div></div>
+      <div class="summary-grid three"><article><span>주일예배 가져온 기록</span><strong id="import-sunday-count">—</strong></article><article><span>새벽예배 가져온 기록</span><strong id="import-dawn-count">—</strong></article><article><span>최근 가져온 시각</span><strong id="import-date">—</strong></article></div>
+      <article class="panel info-panel"><h2>엑셀 자료 갱신 방법</h2><p>원본 엑셀 파일을 수정한 뒤 프로젝트의 가져오기 도구를 실행하면 데이터가 갱신됩니다.</p><code>powershell.exe -ExecutionPolicy Bypass -File .\tools\import-excel.ps1</code><p>프로그램에서 직접 입력한 기록은 브라우저에 별도로 보존됩니다.</p></article>
+    </section>
+
+    <section id="settings" class="page">
+      <div class="page-title"><div><p class="eyebrow">SETTINGS</p><h1>설정</h1><p>프로그램의 기본 표시 내용을 설정합니다.</p></div></div>
+      <article class="panel settings-panel"><form id="settings-form"><label>교회 이름<input name="churchName" type="text" value="인천중앙교회"></label><label>기본 화면<select name="defaultPage"><option value="dashboard">메인보드</option><option value="entry">출석입력</option><option value="yearly">연도별 현황</option></select></label><button class="primary-button" type="submit">설정 저장</button></form><p id="settings-message" class="form-message"></p></article>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -92,6 +92,18 @@ table { width:100%; border-collapse:collapse; font-size:12px; white-space:nowrap
 .entry-panel label { font-size:14px; font-weight:500; }.entry-panel input { min-height:45px; font-size:16px; }.entry-group { display:grid; grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); gap:14px; width:100%; padding:18px; border:1px solid var(--line); background:#f8faf9; }.entry-group>strong { grid-column:1/-1; font-size:17px; }.entry-group label { min-width:0; color:var(--ink); font-size:15px; }.school-entry-group { grid-template-columns:repeat(7,minmax(90px,1fr)); }#entry table { font-size:14px; }#entry th,#entry td { padding:13px 11px; }
 .entry-panel input[type="date"] { cursor:pointer; }
 .entry-panel input:disabled { background:#e8ecea; color:#8b9691; cursor:not-allowed; }
+.admin-auth-panel { padding:22px 24px; }
+#admin-login-view,.admin-session-view { display:flex; align-items:end; justify-content:space-between; gap:24px; }
+#admin-login-view[hidden],.admin-session-view[hidden],#admin-entry-area[hidden] { display:none!important; }
+#admin-login-view h2 { margin:2px 0 6px; }
+#admin-login-view p,.admin-session-view p { margin:5px 0 0; color:var(--muted); }
+#admin-login-form { display:flex; align-items:end; gap:12px; }
+#admin-login-form label { display:flex; min-width:210px; flex-direction:column; gap:6px; color:var(--muted); font-size:12px; }
+#admin-login-form input { min-height:42px; }
+.admin-session-view strong { display:block; margin-top:8px; }
+.admin-status-badge { display:inline-block; padding:4px 9px; border-radius:20px; background:#e8eeeb; color:var(--green); font-size:11px; font-weight:700; }
+.admin-status-badge.denied { background:#f5e9e7; color:var(--red); }
+#admin-entry-area[hidden] { display:none!important; }
 .entry-list-controls { display:flex; align-items:center; gap:12px; }.entry-list-controls .filter select { min-width:95px; }
 input,select { min-height:40px; padding:8px 10px; border:1px solid #cfd8d4; border-radius:3px; background:#fff; color:var(--ink); }.form-actions { display:flex; gap:7px; }.primary-button,.secondary-button { min-height:40px; padding:8px 18px; border-radius:3px; cursor:pointer; }.primary-button { border:1px solid var(--green); background:var(--green); color:#fff; }.secondary-button { border:1px solid var(--line); background:#fff; }.form-message { min-height:18px; margin:12px 0 0; font-size:12px; }.row-actions { display:flex; justify-content:flex-end; gap:5px; }.row-actions button { padding:5px 8px; border:1px solid var(--line); background:#fff; cursor:pointer; }.row-actions .delete { color:var(--red); }
 .filter { display:flex; align-items:center; gap:8px; color:var(--muted); font-size:12px; }.filter select { min-width:110px; }.inline-filters,.section-controls { display:flex; gap:12px; }.section-controls { justify-content:flex-end; margin-bottom:14px; }
@@ -114,6 +126,3 @@ input,select { min-height:40px; padding:8px 10px; border:1px solid #cfd8d4; bord
 @media(max-width:760px){.sidebar{position:static;width:100%;padding:12px}.brand{padding:5px 8px 12px}.main-nav{flex-direction:row;margin-top:10px;overflow:auto}.main-nav button{flex:0 0 auto;width:auto;padding:9px}.main-content{margin-left:0;padding:24px 14px}.page-title{align-items:start;flex-direction:column}.dashboard-summary,.dashboard-summary.five-cards,.dashboard-summary.metric-cards,.summary-grid,.summary-grid.five,.summary-grid.three{grid-template-columns:1fr 1fr}.comparison-delta{grid-template-columns:1fr 1fr}.form-actions{justify-content:end}.chart{height:280px}#dashboard .chart{height:380px}#dashboard .chart-panel{padding:18px}}
 @media(max-width:480px){.dashboard-summary,.summary-grid,.summary-grid.five,.summary-grid.three{grid-template-columns:1fr}.main-nav button span{display:none}.type-tabs button{min-width:0;flex:1}.comparison-delta{grid-template-columns:1fr}}
 @media print{.sidebar,.page-title,.report-controls{display:none!important}.main-content{margin:0;padding:0}.page{display:none!important}#report.page{display:block!important}.panel{border:0;box-shadow:none}}
-
-/* 공개 배포본: 입력·설정·관리 화면을 노출하지 않는다. */
-[data-page="entry"],[data-page="settings"],[data-page="import"],#entry,#settings,#import{display:none!important}

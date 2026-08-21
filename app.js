@@ -1,24 +1,9 @@
 const nf = new Intl.NumberFormat('ko-KR');
 const currentYear = new Date().getFullYear();
 const colors = ['#315f52','#b08750','#758f84','#9a5f58','#58748d','#8b7a9b','#5f826a'];
-const attendanceResetVersion = '2026-08-19-full-reset-2';
-if (localStorage.getItem('attendance-reset-version') !== attendanceResetVersion) {
-  localStorage.removeItem('attendance-custom');
-  localStorage.removeItem('attendance-deleted');
-  localStorage.setItem('attendance-reset-version', attendanceResetVersion);
-}
 let imported = { sundayRecords: [], dawnRecords: [], importedAt: null };
 let supabaseClient = null;
-let custom = JSON.parse(localStorage.getItem('attendance-custom') || '[]');
-let deleted = JSON.parse(localStorage.getItem('attendance-deleted') || '[]');
-const march29CorrectionVersion = '2026-03-29-weekday-import-v1';
-if (localStorage.getItem('march29-correction-version') !== march29CorrectionVersion) {
-  custom = custom.filter((item) => !(item.type === 'sunday' && item.date === '2026-03-29'));
-  deleted = deleted.filter((key) => key !== 'sunday|2026-03-29');
-  localStorage.setItem('attendance-custom', JSON.stringify(custom));
-  localStorage.setItem('attendance-deleted', JSON.stringify(deleted));
-  localStorage.setItem('march29-correction-version', march29CorrectionVersion);
-}
+let currentSession = null, isAdmin = false, authReady = false, entryMutationPending = false;
 let entryType = 'sunday', yearlyType = 'sunday', compareType = 'sunday';
 const clearedSupplementalSundayRecords = [
   {date:'2026-07-05',onsite1:317,online1:56,onsite2:604,online2:77,afternoon:164,afternoonOnline:23,seed:24,sprout:43,spring:108,vision1:99,vision2:39,youth:72,schoolAfternoon:45,teacherSeed:11,teacherSprout:17,teacherSpring:22,teacherVision1:19,teacherVision2:11,teacherYouth:0,teacherSchoolAfternoon:2,cellGroup:287,wednesdayOnsite:76,wednesdayOnline:19,dawnWeeklyOnsite:698,dawnWeeklyOnline:509,weekdayTotal:1589,weeklyGrandTotal:3260},
@@ -52,18 +37,8 @@ function baseRecords(type) {
   return normalized;
 }
 function records(type) {
-  const map = new Map(baseRecords(type).filter((item) => !deleted.includes(keyOf(type,item.date))).map((item) => [item.date,item]));
-  custom.filter((item) => item.type === type && !deleted.includes(keyOf(type,item.date))).forEach((item) => {
-    const merged={ onsite:0,online:0,school:0,schoolTeachers:0,afternoon:0,afternoonOnline:0,onsite1:0,onsite2:0,online1:0,online2:0,seed:0,sprout:0,spring:0,vision1:0,vision2:0,youth:0,schoolAfternoon:0,teacherSeed:0,teacherSprout:0,teacherSpring:0,teacherVision1:0,teacherVision2:0,teacherYouth:0,teacherSchoolAfternoon:0,cellGroup:0,wednesdayOnsite:0,wednesdayOnline:0,...(map.get(item.date)||{}),...item };
-    if(type==='sunday'){
-      merged.weekdayTotal=(merged.cellGroup||0)+(merged.wednesdayOnsite||0)+(merged.wednesdayOnline||0)+(merged.dawnWeeklyOnsite||0)+(merged.dawnWeeklyOnline||0);
-      merged.weeklyGrandTotal=(merged.total||0)+merged.weekdayTotal;
-    }
-    map.set(item.date,merged);
-  });
-  return [...map.values()].sort((a,b) => a.date.localeCompare(b.date));
+  return baseRecords(type).sort((a,b) => a.date.localeCompare(b.date));
 }
-function saveLocal() { localStorage.setItem('attendance-custom',JSON.stringify(custom)); localStorage.setItem('attendance-deleted',JSON.stringify(deleted)); }
 
 function mapSupabaseSunday(row) {
   return {
@@ -105,7 +80,7 @@ async function loadAttendanceFromSupabase() {
   const config=window.WORSHIP_SUPABASE_CONFIG;
   if(!config?.url||!config?.publishableKey) throw new Error('Supabase 공개 연결 설정이 없습니다.');
   if(!window.supabase?.createClient) throw new Error('Supabase JavaScript 라이브러리를 불러오지 못했습니다.');
-  supabaseClient=window.supabase.createClient(config.url,config.publishableKey,{
+  if(!supabaseClient) supabaseClient=window.supabase.createClient(config.url,config.publishableKey,{
     auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}
   });
   const [sundayRows,dawnRows]=await Promise.all([
@@ -117,6 +92,68 @@ async function loadAttendanceFromSupabase() {
     dawnRecords:dawnRows.map(mapSupabaseDawn),
     importedAt:new Date().toISOString()
   };
+}
+
+async function refreshAttendanceFromSupabase() {
+  await loadAttendanceFromSupabase();
+  populateFilters();
+  renderAllVisible();
+}
+
+function setAuthMessage(message='',error=false) {
+  $('admin-auth-message').textContent=message;
+  $('admin-auth-message').className=`form-message ${error?'down':'up'}`;
+}
+
+function setEntryPending(pending) {
+  entryMutationPending=pending;
+  [...$('attendance-form').elements].forEach((control)=>control.disabled=pending||(control.name==='teacherYouth'));
+  $('cancel-edit').disabled=pending;
+}
+
+async function checkAdminAccess(session) {
+  if(!session?.user) return false;
+  const {data,error}=await supabaseClient.from('app_admins').select('user_id').eq('user_id',session.user.id).maybeSingle();
+  if(error) throw new Error(`관리자 권한 확인 실패: ${error.message}`);
+  return Boolean(data);
+}
+
+function updateAdminUI() {
+  const loggedIn=Boolean(currentSession?.user);
+  $('admin-login-view').hidden=loggedIn;
+  $('admin-session-view').hidden=!loggedIn;
+  $('admin-entry-area').hidden=!isAdmin;
+  $('admin-session-email').textContent=loggedIn?currentSession.user.email||'':'';
+  $('admin-status-badge').textContent=isAdmin?'관리자':'권한 없음';
+  $('admin-status-badge').classList.toggle('denied',loggedIn&&!isAdmin);
+  $('admin-session-message').textContent=isAdmin?'출석자료를 입력·수정·삭제할 수 있습니다.':loggedIn?'app_admins에 등록된 관리자 계정이 아닙니다.':'';
+  if(isAdmin) renderEntry();
+  else resetForm(false);
+}
+
+async function syncAuthState(session) {
+  currentSession=session;
+  isAdmin=false;
+  setAuthMessage('');
+  try {
+    if(session) isAdmin=await checkAdminAccess(session);
+  } catch(error) {
+    console.error(error);
+    setAuthMessage(error.message,true);
+  }
+  authReady=true;
+  updateAdminUI();
+}
+
+async function initializeAdminAuth() {
+  localStorage.removeItem('attendance-custom');
+  localStorage.removeItem('attendance-deleted');
+  const {data,error}=await supabaseClient.auth.getSession();
+  if(error) throw new Error(`로그인 상태 확인 실패: ${error.message}`);
+  await syncAuthState(data.session);
+  supabaseClient.auth.onAuthStateChange((_event,session)=>{
+    window.setTimeout(()=>syncAuthState(session),0);
+  });
 }
 function yearsAvailable() {
   const years = new Set([currentYear]);
@@ -186,6 +223,7 @@ function renderDashboard() {
 }
 
 function renderEntry() {
+  if(!isAdmin) return;
   const selectedYear=Number($('entry-year').value),selectedMonth=$('entry-month').value;
   const data=records(entryType).filter(item=>item.year===selectedYear&&(selectedMonth==='all'||item.month===Number(selectedMonth))).slice().reverse(); $('entry-list-title').textContent=`${entryType==='sunday'?'주일':'새벽'}예배 입력 내역`; $('entry-count').textContent=`${nf.format(data.length)}건`;
   document.querySelectorAll('[data-entry-for]').forEach((group)=>group.hidden=group.dataset.entryFor!==entryType);
@@ -193,7 +231,49 @@ function renderEntry() {
   $('entry-records').innerHTML=data.map((item)=>entryType==='sunday'?`<tr><td>${formatDate(item.date)}</td><td>${countText(item.onsite1)}</td><td>${countText(item.online1)}</td><td>${countText(item.onsite2)}</td><td>${countText(item.online2)}</td><td>${countText(item.afternoon)}</td><td>${countText(item.afternoonOnline)}</td><td>${countText(item.school)}</td><td>${countText(item.cellGroup)}</td><td>${countText(item.wednesdayOnsite)}</td><td>${countText(item.wednesdayOnline)}</td><td>${countText(item.total)}</td><td><div class="row-actions"><button data-edit="${keyOf(entryType,item.date)}">수정</button><button class="delete" data-delete="${keyOf(entryType,item.date)}">삭제</button></div></td></tr>`:`<tr><td>${formatDate(item.date)}</td><td>${countText(item.onsite)}</td><td>${countText(item.online)}</td><td>${countText(item.total)}</td><td>${item.note||'-'}</td><td><div class="row-actions"><button data-edit="${keyOf(entryType,item.date)}">수정</button><button class="delete" data-delete="${keyOf(entryType,item.date)}">삭제</button></div></td></tr>`).join('')||`<tr><td class="empty" colspan="${entryType==='sunday'?13:6}">입력된 자료가 없습니다.</td></tr>`;
 }
 document.querySelectorAll('[data-entry-type]').forEach((button)=>button.addEventListener('click',()=>{entryType=button.dataset.entryType;document.querySelectorAll('[data-entry-type]').forEach((item)=>item.classList.toggle('active',item===button));resetForm();renderEntry()}));
-$('attendance-form').addEventListener('submit',(event)=>{event.preventDefault();const form=event.currentTarget,date=form.date.value,original=form.originalKey.value,newKey=keyOf(entryType,date),existing=original?records(entryType).find((item)=>keyOf(entryType,item.date)===original):null;const duplicate=records(entryType).some((item)=>keyOf(entryType,item.date)===newKey&&newKey!==original);if(duplicate){showEntryMessage('같은 날짜의 같은 예배 출석자료가 이미 있습니다.',true);return}if(original&&original!==newKey) removeRecord(original);deleted=deleted.filter((key)=>key!==newKey);custom=custom.filter((item)=>keyOf(item.type,item.date)!==newKey);const d=new Date(`${date}T00:00:00`);let values;if(entryType==='sunday'){const names=['onsite1','onsite2','online1','online2','afternoon','afternoonOnline','seed','sprout','spring','vision1','vision2','youth','schoolAfternoon','teacherSeed','teacherSprout','teacherSpring','teacherVision1','teacherVision2','teacherYouth','teacherSchoolAfternoon','cellGroup','wednesdayOnsite','wednesdayOnline'];values=Object.fromEntries(names.map(name=>[name,name==='teacherYouth'?0:(Number(form[name].value)||0)]));values.onsite=values.onsite1+values.onsite2;values.online=values.online1+values.online2;const departmentTotal=values.seed+values.sprout+values.spring+values.vision1+values.vision2+values.youth+values.schoolAfternoon;values.school=departmentTotal||Number(form.schoolLegacy.value)||0;values.schoolTeachers=values.teacherSeed+values.teacherSprout+values.teacherSpring+values.teacherVision1+values.teacherVision2+values.teacherSchoolAfternoon;values.schoolLegacy=departmentTotal?0:values.school;values.total=values.onsite+values.online+values.school+values.afternoon+values.afternoonOnline;values.dawnWeeklyOnsite=Number(existing?.dawnWeeklyOnsite)||0;values.dawnWeeklyOnline=Number(existing?.dawnWeeklyOnline)||0;values.weekdayTotal=values.cellGroup+values.wednesdayOnsite+values.wednesdayOnline+values.dawnWeeklyOnsite+values.dawnWeeklyOnline;values.weeklyGrandTotal=values.total+values.weekdayTotal}else{values={onsite:Number(form.onsite.value)||0,online:Number(form.online.value)||0,school:0,afternoon:0,afternoonOnline:0};values.total=values.onsite+values.online}custom.push({id:`user-${Date.now()}`,type:entryType,date,year:d.getFullYear(),month:d.getMonth()+1,...values,note:form.note.value.trim(),source:'user'});saveLocal();showEntryMessage(original?'수정했습니다.':'저장했습니다.');resetForm(false);renderAllVisible()});
+function numberValue(form,name){return Number(form.elements[name]?.value)||0}
+function sundayPayload(form,existing) {
+  const departmentTotal=['seed','sprout','spring','vision1','vision2','youth','schoolAfternoon'].reduce((sum,name)=>sum+numberValue(form,name),0);
+  return {
+    worship_date:form.date.value,
+    onsite1:numberValue(form,'onsite1'),online1:numberValue(form,'online1'),onsite2:numberValue(form,'onsite2'),online2:numberValue(form,'online2'),
+    afternoon:numberValue(form,'afternoon'),afternoon_online:numberValue(form,'afternoonOnline'),
+    seed:numberValue(form,'seed'),sprout:numberValue(form,'sprout'),spring:numberValue(form,'spring'),vision1:numberValue(form,'vision1'),vision2:numberValue(form,'vision2'),youth:numberValue(form,'youth'),school_afternoon:numberValue(form,'schoolAfternoon'),
+    teacher_seed:numberValue(form,'teacherSeed'),teacher_sprout:numberValue(form,'teacherSprout'),teacher_spring:numberValue(form,'teacherSpring'),teacher_vision1:numberValue(form,'teacherVision1'),teacher_vision2:numberValue(form,'teacherVision2'),teacher_youth:0,teacher_school_afternoon:numberValue(form,'teacherSchoolAfternoon'),
+    school_legacy:departmentTotal?0:numberValue(form,'schoolLegacy'),
+    cell_group:numberValue(form,'cellGroup'),wednesday_onsite:numberValue(form,'wednesdayOnsite'),wednesday_online:numberValue(form,'wednesdayOnline'),
+    dawn_weekly_onsite:Number(existing?.dawnWeeklyOnsite)||0,dawn_weekly_online:Number(existing?.dawnWeeklyOnline)||0,
+    note:form.note.value.trim(),source:'manual'
+  };
+}
+function dawnPayload(form) {
+  return {worship_date:form.date.value,onsite:numberValue(form,'onsite'),online:numberValue(form,'online'),note:form.note.value.trim(),source:'manual'};
+}
+$('attendance-form').addEventListener('submit',async(event)=>{
+  event.preventDefault();
+  if(!authReady||!isAdmin||!currentSession){showEntryMessage('관리자 로그인이 필요합니다.',true);return}
+  if(entryMutationPending)return;
+  const form=event.currentTarget,date=form.date.value,original=form.originalKey.value;
+  const originalDate=original?original.split('|')[1]:null;
+  const duplicate=records(entryType).some(item=>item.date===date&&item.date!==originalDate);
+  if(duplicate){showEntryMessage('같은 날짜의 같은 예배 출석자료가 이미 있습니다.',true);return}
+  const existing=originalDate?records(entryType).find(item=>item.date===originalDate):null;
+  const table=entryType==='sunday'?'sunday_attendance':'dawn_attendance';
+  const payload=entryType==='sunday'?sundayPayload(form,existing):dawnPayload(form);
+  setEntryPending(true);
+  try {
+    const query=originalDate
+      ? supabaseClient.from(table).update(payload).eq('worship_date',originalDate)
+      : supabaseClient.from(table).upsert(payload,{onConflict:'worship_date'});
+    const {error}=await query.select('worship_date').single();
+    if(error) throw new Error(`${originalDate?'수정':'저장'} 실패: ${error.message}`);
+    await refreshAttendanceFromSupabase();
+    resetForm(false);
+    showEntryMessage(originalDate?'수정했습니다.':'저장했습니다.');
+  } catch(error) {
+    console.error(error);showEntryMessage(error.message,true);
+  } finally {setEntryPending(false)}
+});
 function showEntryMessage(message,error=false){$('entry-message').textContent=message;$('entry-message').className=`form-message ${error?'down':'up'}`}
 function resetForm(clearMessage=true){$('attendance-form').reset();$('attendance-form').originalKey.value='';$('cancel-edit').hidden=true;if(clearMessage)$('entry-message').textContent=''}
 $('cancel-edit').addEventListener('click',()=>resetForm());
@@ -203,8 +283,21 @@ attendanceDateInput.addEventListener('click',()=>{
     try{attendanceDateInput.showPicker()}catch(error){/* 브라우저 기본 날짜 선택기를 사용합니다. */}
   }
 });
-$('entry-records').addEventListener('click',(event)=>{const edit=event.target.dataset.edit,del=event.target.dataset.delete;if(edit){const [type,date]=edit.split('|'),item=records(type).find((row)=>row.date===date);entryType=type;const form=$('attendance-form');form.originalKey.value=edit;form.date.value=item.date;const fields=type==='sunday'?['onsite1','online1','onsite2','online2','afternoon','afternoonOnline','seed','sprout','spring','vision1','vision2','youth','schoolAfternoon','teacherSeed','teacherSprout','teacherSpring','teacherVision1','teacherVision2','teacherYouth','teacherSchoolAfternoon','cellGroup','wednesdayOnsite','wednesdayOnline']:['onsite','online'];fields.forEach(field=>form[field].value=item[field]||'');form.schoolLegacy.value=item.schoolLegacy||item.school||0;form.note.value=item.note||'';$('cancel-edit').hidden=false;document.querySelectorAll('[data-entry-type]').forEach(button=>button.classList.toggle('active',button.dataset.entryType===type));renderEntry();window.scrollTo({top:0,behavior:'smooth'})}if(del&&confirm('이 출석자료를 삭제할까요?')){removeRecord(del);saveLocal();renderAllVisible()}});
-function removeRecord(key){const [type,date]=key.split('|');custom=custom.filter((item)=>keyOf(item.type,item.date)!==key);if(baseRecords(type).some((item)=>item.date===date)&&!deleted.includes(key))deleted.push(key)}
+$('entry-records').addEventListener('click',async(event)=>{
+  if(!isAdmin||entryMutationPending)return;
+  const edit=event.target.dataset.edit,del=event.target.dataset.delete;
+  if(edit){
+    const [type,date]=edit.split('|'),item=records(type).find(row=>row.date===date);if(!item)return;
+    entryType=type;const form=$('attendance-form');form.originalKey.value=edit;form.date.value=item.date;
+    const fields=type==='sunday'?['onsite1','online1','onsite2','online2','afternoon','afternoonOnline','seed','sprout','spring','vision1','vision2','youth','schoolAfternoon','teacherSeed','teacherSprout','teacherSpring','teacherVision1','teacherVision2','teacherYouth','teacherSchoolAfternoon','cellGroup','wednesdayOnsite','wednesdayOnline']:['onsite','online'];
+    fields.forEach(field=>form.elements[field].value=item[field]||'');form.schoolLegacy.value=item.schoolLegacy||item.school||0;form.note.value=item.note||'';
+    $('cancel-edit').hidden=false;document.querySelectorAll('[data-entry-type]').forEach(button=>button.classList.toggle('active',button.dataset.entryType===type));renderEntry();window.scrollTo({top:0,behavior:'smooth'});return;
+  }
+  if(del&&confirm('이 출석자료를 삭제할까요?')){
+    const [type,date]=del.split('|'),table=type==='sunday'?'sunday_attendance':'dawn_attendance';setEntryPending(true);
+    try {const {error}=await supabaseClient.from(table).delete().eq('worship_date',date).select('worship_date').single();if(error)throw new Error(`삭제 실패: ${error.message}`);await refreshAttendanceFromSupabase();resetForm(false);showEntryMessage('삭제했습니다.')}catch(error){console.error(error);showEntryMessage(error.message,true)}finally{setEntryPending(false)}
+  }
+});
 
 function populateFilters() {
   const years=yearsAvailable(), latest=years.at(-1); ['yearly-year','monthly-year','report-year'].forEach((id)=>{const old=$(id).value;setOptions($(id),years,old||latest)});
@@ -425,4 +518,12 @@ function drawGrouped(id,sets,cutoff,overlayLines=false){
 }
 
 window.addEventListener('resize',()=>{clearTimeout(window.resizeTimer);window.resizeTimer=setTimeout(()=>renderPage(document.querySelector('.page.active')?.id),150)});
-loadAttendanceFromSupabase().then(()=>{populateFilters();const initial=location.hash.slice(1)||settings.defaultPage||'dashboard';showPage($(initial)?initial:'dashboard')}).catch(error=>{console.error(error);populateFilters();showPage('dashboard')});
+$('admin-login-form').addEventListener('submit',async(event)=>{
+  event.preventDefault();const form=event.currentTarget,button=form.querySelector('button[type="submit"]');button.disabled=true;setAuthMessage('로그인 중입니다.');
+  try {const {error}=await supabaseClient.auth.signInWithPassword({email:form.email.value.trim(),password:form.password.value});if(error)throw new Error(`로그인 실패: ${error.message}`);form.password.value='';setAuthMessage('로그인했습니다.')}catch(error){console.error(error);setAuthMessage(error.message,true)}finally{button.disabled=false}
+});
+$('admin-logout').addEventListener('click',async()=>{
+  $('admin-logout').disabled=true;
+  try {const {error}=await supabaseClient.auth.signOut();if(error)throw new Error(`로그아웃 실패: ${error.message}`);setAuthMessage('로그아웃했습니다.')}catch(error){console.error(error);setAuthMessage(error.message,true)}finally{$('admin-logout').disabled=false}
+});
+loadAttendanceFromSupabase().then(async()=>{await initializeAdminAuth();populateFilters();const initial=location.hash.slice(1)||settings.defaultPage||'dashboard';showPage($(initial)?initial:'dashboard')}).catch(error=>{console.error(error);setAuthMessage(error.message,true);populateFilters();showPage('dashboard')});

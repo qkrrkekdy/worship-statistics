@@ -40,6 +40,22 @@
 
     <section id="entry" class="page">
       <div class="page-title"><div><p class="eyebrow">ATTENDANCE ENTRY</p><h1>출석입력</h1><p>예배 출석을 입력하고 수정하거나 삭제할 수 있습니다.</p></div></div>
+      <article id="admin-auth-panel" class="panel admin-auth-panel">
+        <div id="admin-login-view">
+          <div><p class="eyebrow">ADMIN LOGIN</p><h2>관리자 로그인</h2><p>출석자료 관리는 등록된 관리자만 사용할 수 있습니다.</p></div>
+          <form id="admin-login-form">
+            <label>이메일<input type="email" name="email" autocomplete="username" required></label>
+            <label>비밀번호<input type="password" name="password" autocomplete="current-password" required></label>
+            <button class="primary-button" type="submit">로그인</button>
+          </form>
+        </div>
+        <div id="admin-session-view" class="admin-session-view" hidden>
+          <div><span id="admin-status-badge" class="admin-status-badge">확인 중</span><strong id="admin-session-email"></strong><p id="admin-session-message"></p></div>
+          <button id="admin-logout" class="secondary-button" type="button">로그아웃</button>
+        </div>
+        <p id="admin-auth-message" class="form-message" role="status"></p>
+      </article>
+      <div id="admin-entry-area" hidden>
       <div class="type-tabs"><button class="active" data-entry-type="sunday">주일예배</button><button data-entry-type="dawn">새벽예배</button></div>
       <article class="panel entry-panel">
         <form id="attendance-form">
@@ -57,6 +73,7 @@
         <p id="entry-message" class="form-message" role="status"></p>
       </article>
       <article class="panel"><div class="panel-heading"><h2 id="entry-list-title">주일예배 입력 내역</h2><div class="entry-list-controls"><label class="filter">연도<select id="entry-year"></select></label><label class="filter">월<select id="entry-month"></select></label><span id="entry-count"></span></div></div><div class="table-wrap"><table><thead id="entry-record-head"></thead><tbody id="entry-records"></tbody></table></div></article>
+      </div>
     </section>
 
     <section id="yearly" class="page">

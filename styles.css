@@ -80,6 +80,7 @@ table { width:100%; border-collapse:collapse; font-size:12px; white-space:nowrap
 #dashboard .chart-panel { overflow-x:auto; }
 #dashboard .chart { min-width:1180px; }
 .chart-description { margin-top:7px; color:var(--muted); font-size:13px; }
+.mobile-chart-hint { display:none; }
 #dashboard .annual-tables h2 small { color:var(--muted); font-size:12px; font-weight:500; }
 .yearly-chart-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; }.yearly-chart-grid .panel { margin-bottom:0; }.yearly-chart-grid .full { grid-column:1/-1; margin-bottom:18px; }.chart.small { height:270px; }
 .horizontal-records { max-width:100%; }.horizontal-records table { width:max-content; min-width:100%; }.horizontal-records th,.horizontal-records td { min-width:82px; text-align:center; }.horizontal-records th:first-child,.horizontal-records td:first-child { position:sticky; left:0; z-index:2; min-width:120px; background:#f6f8f7; font-weight:600; text-align:left; }
@@ -138,13 +139,14 @@ input,select { min-height:40px; padding:8px 10px; border:1px solid #cfd8d4; bord
   .sidebar{position:fixed;inset:64px auto 0 0;z-index:30;width:min(82vw,310px);padding:18px 14px;overflow-y:auto;transform:translateX(-105%);box-shadow:8px 0 24px rgba(13,27,23,.22);transition:transform .22s ease}
   .mobile-menu-open .sidebar{transform:translateX(0)}
   .brand{padding:8px 10px 16px}.main-nav{flex-direction:column;margin-top:12px;overflow:visible}.main-nav button{width:100%;min-height:48px;padding:12px 14px;font-size:15px}
-  .main-content{margin-left:0;padding:88px 14px 44px}.page-title{align-items:start;flex-direction:column}.panel{max-width:100%}
+  .main-content{width:100%;max-width:100vw;margin-left:0;padding:88px 14px 44px;overflow-x:hidden}.page-title{align-items:start;flex-direction:column}.page,.panel{width:100%;min-width:0;max-width:100%}
   .dashboard-summary,.dashboard-summary.five-cards,.dashboard-summary.metric-cards,.summary-grid,.summary-grid.five,.summary-grid.three{grid-template-columns:1fr}
   .comparison-delta{grid-template-columns:1fr 1fr}.annual-tables,.monthly-grid,.yearly-chart-grid{grid-template-columns:1fr}
   .table-wrap{max-width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-inline:contain}
   .table-wrap table{width:max-content;min-width:680px}.monthly-sheet .table-wrap table{min-width:760px}.vertical-records table{table-layout:auto}#entry .table-wrap table{min-width:1120px}.detail-comparison-table{min-width:980px!important}.comparison-monthly-table{min-width:620px!important}
-  .chart,.chart.small,.chart.tall{width:100%;min-width:0!important;height:280px}.chart canvas{display:block;max-width:100%}
-  #dashboard .chart{width:100%;min-width:0;height:320px}#dashboard .chart-panel{padding:18px;overflow:hidden}.comparison-monthly-panel{overflow:hidden}.comparison-monthly-panel>.chart{min-width:0}
+  .chart,.chart.small,.chart.tall{display:block;width:100%;max-width:100%;min-width:0!important;height:460px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-inline:contain;contain:inline-size}.chart canvas{display:block;width:920px!important;min-width:920px!important;max-width:none;height:100%!important}
+  #dashboard,#dashboard .chart-panel{width:100%;min-width:0;max-width:100%}#dashboard .chart{width:100%;max-width:100%;min-width:0;height:480px;overflow-x:auto}#dashboard .chart-panel{padding:18px;overflow:hidden}#dashboard .chart-panel>div:first-child{width:100%;min-width:0;max-width:100%}.comparison-monthly-panel{overflow:hidden}.comparison-monthly-panel>.chart{min-width:0}
+  .mobile-chart-hint{display:block;margin:12px 0 -4px;color:var(--muted);font-size:12px;text-align:right}
   .entry-panel form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:end;gap:14px}.entry-panel form>label,.entry-panel .note-field{min-width:0;flex:none}.entry-panel form>.entry-group,.entry-panel form>.form-actions,.entry-panel form>.note-field{grid-column:1/-1}
   .entry-group,.school-entry-group{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:16px}.entry-group label{min-width:0}.entry-panel input,.entry-panel select{width:100%;min-height:50px;padding:11px 12px;font-size:16px}
   .form-actions{justify-content:stretch}.form-actions button{min-height:50px;flex:1;padding:11px 18px;font-size:15px}.row-actions button{min-height:42px;padding:8px 12px}
@@ -155,6 +157,6 @@ input,select { min-height:40px; padding:8px 10px; border:1px solid #cfd8d4; bord
   .main-content{padding-right:10px;padding-left:10px}.panel{padding-right:14px;padding-left:14px}.comparison-delta{grid-template-columns:1fr}
   .entry-panel form,.entry-group,.school-entry-group,#admin-login-form{grid-template-columns:1fr}.entry-panel form>label,.entry-panel form>.note-field{grid-column:1/-1}
   .type-tabs button{min-width:0;flex:1}.entry-list-controls{align-items:stretch;flex-direction:column}.entry-list-controls .filter{justify-content:space-between}.entry-list-controls .filter select{flex:1}
-  .form-actions{flex-direction:column}.form-actions button{width:100%}.chart,.chart.small,.chart.tall{height:260px}#dashboard .chart{height:280px}
+  .form-actions{flex-direction:column}.form-actions button{width:100%}.chart,.chart.small,.chart.tall{height:440px}#dashboard .chart{height:460px}
 }
 @media print{.sidebar,.page-title,.report-controls{display:none!important}.main-content{margin:0;padding:0}.page{display:none!important}#report.page{display:block!important}.panel{border:0;box-shadow:none}}

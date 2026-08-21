@@ -8,7 +8,14 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <aside class="sidebar">
+  <header class="mobile-header">
+    <button id="mobile-menu-toggle" class="mobile-menu-toggle" type="button" aria-expanded="false" aria-controls="primary-sidebar" aria-label="메뉴 열기">
+      <span></span><span></span><span></span>
+    </button>
+    <button class="mobile-brand" type="button" data-page="dashboard"><strong>인천중앙교회</strong><small>예배 출석 관리</small></button>
+  </header>
+  <button id="mobile-menu-overlay" class="mobile-menu-overlay" type="button" aria-label="메뉴 닫기" hidden></button>
+  <aside id="primary-sidebar" class="sidebar">
     <button class="brand" type="button" data-page="dashboard"><span>✦</span><strong>인천중앙교회</strong><small>예배 출석 관리</small></button>
     <nav class="main-nav" aria-label="주요 메뉴">
       <button class="active" data-page="dashboard"><span>▦</span>메인보드</button>

@@ -188,7 +188,19 @@ function showPage(pageId) {
   history.replaceState(null,'',`#${pageId}`);
   renderPage(pageId); window.scrollTo(0,0);
 }
-document.querySelectorAll('[data-page]').forEach((button) => button.addEventListener('click',()=>showPage(button.dataset.page)));
+const mobileMenuToggle=$('mobile-menu-toggle'),mobileMenuOverlay=$('mobile-menu-overlay');
+function setMobileMenu(open){
+  const mobile=window.matchMedia('(max-width: 768px)').matches;
+  const shouldOpen=mobile&&open;
+  document.body.classList.toggle('mobile-menu-open',shouldOpen);
+  mobileMenuToggle.setAttribute('aria-expanded',String(shouldOpen));
+  mobileMenuToggle.setAttribute('aria-label',shouldOpen?'메뉴 닫기':'메뉴 열기');
+  mobileMenuOverlay.hidden=!shouldOpen;
+}
+mobileMenuToggle.addEventListener('click',()=>setMobileMenu(!document.body.classList.contains('mobile-menu-open')));
+mobileMenuOverlay.addEventListener('click',()=>setMobileMenu(false));
+document.addEventListener('keydown',(event)=>{if(event.key==='Escape')setMobileMenu(false)});
+document.querySelectorAll('[data-page]').forEach((button) => button.addEventListener('click',()=>{showPage(button.dataset.page);setMobileMenu(false)}));
 
 function renderDashboard() {
   const years = yearsAvailable(), dashboardYears = years;
@@ -517,7 +529,7 @@ function drawGrouped(id,sets,cutoff,overlayLines=false){
   ctx.textAlign='left';ctx.font='700 11px Noto Sans KR';sets.forEach((s,i)=>{const legendX=p.l+i*86;ctx.fillStyle=comparisonColors[i%comparisonColors.length];ctx.fillRect(legendX,10,18,5);ctx.fillStyle='#52615b';ctx.fillText(`${s.year}년`,legendX+24,17)});
 }
 
-window.addEventListener('resize',()=>{clearTimeout(window.resizeTimer);window.resizeTimer=setTimeout(()=>renderPage(document.querySelector('.page.active')?.id),150)});
+window.addEventListener('resize',()=>{if(window.innerWidth>768)setMobileMenu(false);clearTimeout(window.resizeTimer);window.resizeTimer=setTimeout(()=>renderPage(document.querySelector('.page.active')?.id),150)});
 $('admin-login-form').addEventListener('submit',async(event)=>{
   event.preventDefault();const form=event.currentTarget,button=form.querySelector('button[type="submit"]');button.disabled=true;setAuthMessage('로그인 중입니다.');
   try {const {error}=await supabaseClient.auth.signInWithPassword({email:form.email.value.trim(),password:form.password.value});if(error)throw new Error(`로그인 실패: ${error.message}`);form.password.value='';setAuthMessage('로그인했습니다.')}catch(error){console.error(error);setAuthMessage(error.message,true)}finally{button.disabled=false}

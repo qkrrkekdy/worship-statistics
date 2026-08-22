@@ -3,6 +3,10 @@ const currentYear = new Date().getFullYear();
 const colors = ['#0057B8','#E87500','#008A3B','#D62828','#6A00B8','#00A6D6','#CC79A7','#8C564B','#6B8E23','#2F2F2F'];
 let imported = { sundayRecords: [], dawnRecords: [], importedAt: null };
 let supabaseClient = null;
+let attendanceLoadPromise = null;
+let fullAttendanceReady = false;
+let recentAttendance = { sunday: null, dawn: [] };
+let recentAttendanceState = 'loading';
 let currentSession = null, isAdmin = false, authReady = false, entryMutationPending = false;
 let entryType = 'sunday', yearlyType = 'sunday', compareType = 'sunday';
 const clearedSupplementalSundayRecords = [
@@ -76,26 +80,73 @@ async function fetchAllSupabaseRows(table) {
   }
 }
 
-async function loadAttendanceFromSupabase() {
+function initializeSupabaseClient() {
   const config=window.WORSHIP_SUPABASE_CONFIG;
   if(!config?.url||!config?.publishableKey) throw new Error('Supabase 공개 연결 설정이 없습니다.');
   if(!window.supabase?.createClient) throw new Error('Supabase JavaScript 라이브러리를 불러오지 못했습니다.');
   if(!supabaseClient) supabaseClient=window.supabase.createClient(config.url,config.publishableKey,{
     auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}
   });
-  const [sundayRows,dawnRows]=await Promise.all([
-    fetchAllSupabaseRows('sunday_attendance'),
-    fetchAllSupabaseRows('dawn_attendance')
-  ]);
-  imported={
-    sundayRecords:sundayRows.map(mapSupabaseSunday),
-    dawnRecords:dawnRows.map(mapSupabaseDawn),
-    importedAt:new Date().toISOString()
-  };
+}
+
+async function loadRecentAttendanceFromSupabase() {
+  initializeSupabaseClient();
+  recentAttendanceState='loading';
+  renderDashboardRecent();
+  try {
+    const [sundayResult,dawnResult]=await Promise.all([
+      supabaseClient.from('sunday_attendance').select('*').order('worship_date',{ascending:false}).limit(1),
+      supabaseClient.from('dawn_attendance').select('*').order('worship_date',{ascending:false}).limit(6)
+    ]);
+    if(sundayResult.error) throw new Error(`sunday_attendance 최근 조회 실패: ${sundayResult.error.message}`);
+    if(dawnResult.error) throw new Error(`dawn_attendance 최근 조회 실패: ${dawnResult.error.message}`);
+    recentAttendance={
+      sunday:sundayResult.data[0]?mapSupabaseSunday(sundayResult.data[0]):null,
+      dawn:dawnResult.data.map(mapSupabaseDawn).reverse()
+    };
+    recentAttendanceState='ready';
+  } catch(error) {
+    recentAttendanceState='error';
+    throw error;
+  } finally {
+    renderDashboardRecent();
+  }
+}
+
+function loadAttendanceFromSupabase() {
+  initializeSupabaseClient();
+  if(attendanceLoadPromise) return attendanceLoadPromise;
+  fullAttendanceReady=false;
+  updateFullAttendanceLoadingUI();
+  attendanceLoadPromise=(async()=>{
+    const [sundayRows,dawnRows]=await Promise.all([
+      fetchAllSupabaseRows('sunday_attendance'),
+      fetchAllSupabaseRows('dawn_attendance')
+    ]);
+    imported={
+      sundayRecords:sundayRows.map(mapSupabaseSunday),
+      dawnRecords:dawnRows.map(mapSupabaseDawn),
+      importedAt:new Date().toISOString()
+    };
+    fullAttendanceReady=true;
+    updateFullAttendanceLoadingUI();
+    return imported;
+  })().catch(error=>{
+    attendanceLoadPromise=null;
+    updateFullAttendanceLoadingUI(error.message);
+    throw error;
+  });
+  return attendanceLoadPromise;
 }
 
 async function refreshAttendanceFromSupabase() {
+  attendanceLoadPromise=null;
   await loadAttendanceFromSupabase();
+  recentAttendance={
+    sunday:imported.sundayRecords.at(-1)||null,
+    dawn:imported.dawnRecords.slice(-6)
+  };
+  recentAttendanceState='ready';
   populateFilters();
   renderAllVisible();
 }
@@ -186,6 +237,7 @@ function showPage(pageId) {
   document.querySelectorAll('.page').forEach((page) => page.classList.toggle('active',page.id===pageId));
   document.querySelectorAll('[data-page]').forEach((button) => button.classList.toggle('active',button.dataset.page===pageId));
   history.replaceState(null,'',`#${pageId}`);
+  updateFullAttendanceLoadingUI();
   renderPage(pageId); window.scrollTo(0,0);
 }
 const mobileMenuToggle=$('mobile-menu-toggle'),mobileMenuOverlay=$('mobile-menu-overlay');
@@ -202,11 +254,18 @@ mobileMenuOverlay.addEventListener('click',()=>setMobileMenu(false));
 document.addEventListener('keydown',(event)=>{if(event.key==='Escape')setMobileMenu(false)});
 document.querySelectorAll('[data-page]').forEach((button) => button.addEventListener('click',()=>{showPage(button.dataset.page);setMobileMenu(false)}));
 
-function renderDashboard() {
-  const years = yearsAvailable(), dashboardYears = years;
-  $('dashboard-period').textContent = `${years[0]||2022}–${years.at(-1)||currentYear}`;
-  const sunday=records('sunday'), dawn=dawnAnalysisRecords();
-  const latestSunday=sunday.at(-1), dailyDawn=records('dawn'), latestDawn=dailyDawn.at(-1);
+function renderDashboardRecent() {
+  const loading=recentAttendanceState==='loading', failed=recentAttendanceState==='error';
+  const loadingText=failed?'불러오지 못했습니다':'불러오는 중…';
+  if(loading||failed){
+    ['dashboard-latest-sunday-onsite','dashboard-latest-sunday-online','dashboard-latest-sunday','dashboard-latest-sunday-school','dashboard-year-sunday-onsite1','dashboard-year-sunday-online1','dashboard-year-sunday-total1','dashboard-year-sunday-onsite2','dashboard-year-sunday-online2','dashboard-year-sunday-total2'].forEach(id=>$(id).textContent='—');
+    $('dashboard-latest-sunday-date').textContent=loadingText;
+    $('dashboard-year-sunday-period').textContent=loadingText;
+    $('dashboard-latest-dawn-week').innerHTML=Array.from({length:6},()=>'<div><small>—</small><strong>— / —</strong></div>').join('');
+    $('dashboard-year-dawn-period').textContent=loadingText;
+    return;
+  }
+  const latestSunday=recentAttendance.sunday, dailyDawn=recentAttendance.dawn, latestDawn=dailyDawn.at(-1);
   $('dashboard-latest-sunday-onsite').textContent=latestSunday?countText(latestSunday.onsite||0):'—';
   $('dashboard-latest-sunday-online').textContent=latestSunday?countText(latestSunday.online||0):'—';
   $('dashboard-latest-sunday').textContent=latestSunday?countText((latestSunday.onsite||0)+(latestSunday.online||0)):'—';
@@ -220,19 +279,41 @@ function renderDashboard() {
   $('dashboard-year-sunday-total2').textContent=latestSunday?countText((latestSunday.onsite2||0)+(latestSunday.online2||0)):'—';
   $('dashboard-year-sunday-period').textContent=latestSunday?`${formatDate(latestSunday.date)} 기준`:'입력 자료 없음';
   if(latestDawn){
-    const recentDawn=dailyDawn.slice(-6), dayLabels=['일','월','화','수','목','금','토'];
-    $('dashboard-latest-dawn-week').innerHTML=recentDawn.map(item=>{const day=dayLabels[new Date(`${item.date}T00:00:00`).getDay()];return `<div><small>${day}</small><strong>${nf.format(item.onsite||0)} / ${nf.format(item.online||0)}</strong></div>`}).join('');
-    $('dashboard-year-dawn-period').textContent=`${recentDawn[0].date.slice(5).replace('-','/')}–${recentDawn.at(-1).date.slice(5).replace('-','/')} 기준`;
+    const dayLabels=['일','월','화','수','목','금','토'];
+    $('dashboard-latest-dawn-week').innerHTML=dailyDawn.map(item=>{const day=dayLabels[new Date(`${item.date}T00:00:00`).getDay()];return `<div><small>${day}</small><strong>${nf.format(item.first||0)} / ${nf.format(item.second||0)}</strong></div>`}).join('');
+    $('dashboard-year-dawn-period').textContent=`${dailyDawn[0].date.slice(5).replace('-','/')}–${dailyDawn.at(-1).date.slice(5).replace('-','/')} 기준`;
   }else{
     $('dashboard-latest-dawn-week').innerHTML=Array.from({length:6},()=>'<div><small>—</small><strong>— / —</strong></div>').join('');
     $('dashboard-year-dawn-period').textContent='입력 자료 없음';
   }
+}
+
+function updateFullAttendanceLoadingUI(errorMessage='') {
+  const message=errorMessage?`전체 통계를 불러오지 못했습니다: ${errorMessage}`:'전체 통계를 불러오는 중…';
+  const dashboardActive=$('dashboard').classList.contains('active');
+  $('app-data-status').hidden=fullAttendanceReady||dashboardActive;
+  $('app-data-status').textContent=message;
+  $('dashboard-statistics-loading').hidden=fullAttendanceReady;
+  $('dashboard-statistics-loading').textContent=message;
+  $('dashboard-statistics').hidden=!fullAttendanceReady;
+}
+
+function renderDashboardStatistics() {
+  const years = yearsAvailable(), dashboardYears = years;
+  $('dashboard-period').textContent = `${years[0]||2022}–${years.at(-1)||currentYear}`;
+  const sunday=records('sunday'), dawn=dawnAnalysisRecords();
   $('dash-sunday-years').innerHTML=dashboardYears.map((year,index)=>{const avg=average(sunday.filter(x=>x.year===year)),previous=index?average(sunday.filter(x=>x.year===dashboardYears[index-1])):null,change=changeInfo(avg,previous);return `<tr><td>${year}년</td><td>${countText(avg)}</td><td class="${change.className}">${change.diff==null?'—':`${change.diff>0?'▲ +':change.diff<0?'▼ -':''}${nf.format(Math.abs(Math.round(change.diff)))}명`}</td><td class="${change.className}">${change.pct==null?'—':`${change.pct>0?'+':''}${change.pct.toFixed(1)}%`}</td></tr>`}).join('');
   $('dash-dawn-years').innerHTML=dashboardYears.map((year,index)=>{const items=dawn.filter(x=>x.year===year),avg=average(items),previous=index?average(dawn.filter(x=>x.year===dashboardYears[index-1])):null,change=changeInfo(avg,previous);return `<tr><td>${year}년</td><td>${countText(fieldAverage(items,'onsite'))}</td><td>${countText(fieldAverage(items,'online'))}</td><td>${countText(avg)}</td><td class="${change.className}">${change.diff==null?'—':`${change.diff>0?'▲ +':change.diff<0?'▼ -':''}${nf.format(Math.abs(Math.round(change.diff)))}명`}</td><td class="${change.className}">${change.pct==null?'—':`${change.pct>0?'+':''}${change.pct.toFixed(1)}%`}</td></tr>`}).join('');
   drawReadableLines('dashboard-sunday-chart',sunday,dashboardYears,(item)=>(item.onsite||0)+(item.online||0));
   drawReadableLines('dashboard-afternoon-chart',sunday,dashboardYears,(item)=>(item.afternoon||0)+(item.afternoonOnline||0));
   drawReadableLines('dashboard-dawn-chart',dawn,dashboardYears,(item)=>item.total,50);
   drawReadableLines('dashboard-wednesday-chart',sunday,dashboardYears,(item)=>(item.wednesdayOnsite||0)+(item.wednesdayOnline||0),null,true);
+}
+
+function renderDashboard() {
+  renderDashboardRecent();
+  updateFullAttendanceLoadingUI();
+  if(fullAttendanceReady) renderDashboardStatistics();
 }
 
 function renderEntry() {
@@ -539,4 +620,13 @@ $('admin-logout').addEventListener('click',async()=>{
   $('admin-logout').disabled=true;
   try {const {error}=await supabaseClient.auth.signOut();if(error)throw new Error(`로그아웃 실패: ${error.message}`);setAuthMessage('로그아웃했습니다.')}catch(error){console.error(error);setAuthMessage(error.message,true)}finally{$('admin-logout').disabled=false}
 });
-loadAttendanceFromSupabase().then(async()=>{await initializeAdminAuth();populateFilters();const initial=location.hash.slice(1)||settings.defaultPage||'dashboard';showPage($(initial)?initial:'dashboard')}).catch(error=>{console.error(error);setAuthMessage(error.message,true);populateFilters();showPage('dashboard')});
+initializeSupabaseClient();
+populateFilters();
+const initialPage=location.hash.slice(1)||settings.defaultPage||'dashboard';
+showPage($(initialPage)?initialPage:'dashboard');
+initializeAdminAuth().catch(error=>{console.error(error);setAuthMessage(error.message,true)});
+loadRecentAttendanceFromSupabase()
+  .catch(error=>console.error(error))
+  .finally(()=>loadAttendanceFromSupabase()
+    .then(()=>{populateFilters();renderAllVisible()})
+    .catch(error=>{console.error(error);setAuthMessage(error.message,true)}));

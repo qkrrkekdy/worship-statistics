@@ -210,6 +210,7 @@ function renderDashboard() {
   $('dashboard-latest-sunday-onsite').textContent=latestSunday?countText(latestSunday.onsite||0):'—';
   $('dashboard-latest-sunday-online').textContent=latestSunday?countText(latestSunday.online||0):'—';
   $('dashboard-latest-sunday').textContent=latestSunday?countText((latestSunday.onsite||0)+(latestSunday.online||0)):'—';
+  $('dashboard-latest-sunday-school').textContent=latestSunday?countText(latestSunday.school||0):'—';
   $('dashboard-latest-sunday-date').textContent=latestSunday?`${formatDate(latestSunday.date)} 기준`:'입력 자료 없음';
   $('dashboard-year-sunday-onsite1').textContent=latestSunday?countText(latestSunday.onsite1||0):'—';
   $('dashboard-year-sunday-online1').textContent=latestSunday?countText(latestSunday.online1||0):'—';
@@ -419,7 +420,7 @@ function renderMonthly(){
       columns.innerHTML='<col class="dawn-date-column"><col class="dawn-value-column"><col class="dawn-value-column"><col class="dawn-value-column">';
       columns.parentElement.style.minWidth='100%';
       head.innerHTML='<tr><th>날짜</th><th>현장</th><th>온라인</th><th>합계</th></tr>';
-      body.innerHTML=items.map(item=>`<tr><td>${item.date.slice(5).replace('-','/')} <small>${['일','월','화','수','목','금','토'][new Date(`${item.date}T00:00:00`).getDay()]}</small></td><td>${nf.format(item.onsite||0)}</td><td>${nf.format(item.online||0)}</td><td><strong>${nf.format(item.total)}</strong></td></tr>`).join('');
+      body.innerHTML=[...items].reverse().map(item=>`<tr><td>${item.date.slice(5).replace('-','/')} <small>${['일','월','화','수','목','금','토'][new Date(`${item.date}T00:00:00`).getDay()]}</small></td><td>${nf.format(item.onsite||0)}</td><td>${nf.format(item.online||0)}</td><td><strong>${nf.format(item.total)}</strong></td></tr>`).join('');
     }else{columns.innerHTML='<col class="dawn-date-column"><col class="dawn-value-column"><col class="dawn-value-column"><col class="dawn-value-column">';columns.parentElement.style.minWidth='100%';head.innerHTML='<tr><th>날짜</th><th>현장</th><th>온라인</th><th>합계</th></tr>';body.innerHTML='<tr><td class="empty" colspan="4">자료가 없습니다.</td></tr>'}
   };
   renderDawnTable(dawnDaily);

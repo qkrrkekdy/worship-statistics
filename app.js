@@ -1,6 +1,6 @@
 const nf = new Intl.NumberFormat('ko-KR');
 const currentYear = new Date().getFullYear();
-const colors = ['#315f52','#b08750','#758f84','#9a5f58','#58748d','#8b7a9b','#5f826a'];
+const colors = ['#0072B2','#E69F00','#009E73','#D55E00','#7B2CBF','#00A6D6','#CC79A7','#8C564B','#6B8E23','#2F2F2F'];
 let imported = { sundayRecords: [], dawnRecords: [], importedAt: null };
 let supabaseClient = null;
 let currentSession = null, isAdmin = false, authReady = false, entryMutationPending = false;
@@ -442,7 +442,7 @@ function drawBars(id,labels,values,color){const{ctx,w,h}=canvas(id),nums=values.
 function drawReadableLines(id,data,years,valueFor=(item)=>item.total,tickStep=null,focusRange=false){
   const {ctx,w,h}=canvas(id),series=years.map(year=>({year,values:Array.from({length:12},(_,index)=>{const items=data.filter(item=>item.year===year&&item.month===index+1);if(!items.length)return null;const value=items.reduce((sum,item)=>sum+valueFor(item),0)/items.length;return focusRange&&value===0?null:value})}));
   const nums=series.flatMap(item=>item.values).filter(value=>value!=null),dataMin=nums.length?Math.min(...nums):0,dataMax=Math.max(...nums,1),spread=Math.max(dataMax-dataMin,dataMax*.06,1),axisFloor=focusRange?Math.max(0,dataMin-spread*.16):0,rawMax=focusRange?dataMax+spread*.16:dataMax*1.08,{p,pw,ph,axisMax,axisMin}=frame(ctx,w,h,rawMax,128,tickStep,axisFloor),valueY=value=>p.t+ph-(value-axisMin)/(axisMax-axisMin)*ph,x=index=>p.l+pw*index/11,seriesGap=12,seriesX=(month,index)=>x(month)+(index-(series.length-1)/2)*seriesGap,dashes=years.map(()=>[]);
-  ctx.font='700 12px Noto Sans KR';ctx.textAlign='left';series.forEach((item,index)=>{const legendX=p.l+index*Math.min(105,(pw+70)/Math.max(series.length,1));ctx.strokeStyle=colors[index%colors.length];ctx.lineWidth=3;ctx.setLineDash(dashes[index%dashes.length]);ctx.beginPath();ctx.moveTo(legendX,16);ctx.lineTo(legendX+25,16);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#52615b';ctx.fillText(`${item.year}년`,legendX+31,20)});
+  ctx.font='700 12px Noto Sans KR';ctx.textAlign='left';series.forEach((item,index)=>{const legendX=p.l+index*Math.min(105,(pw+70)/Math.max(series.length,1));ctx.strokeStyle=colors[index%colors.length];ctx.lineWidth=3;ctx.setLineDash(dashes[index%dashes.length]);ctx.beginPath();ctx.moveTo(legendX,16);ctx.lineTo(legendX+25,16);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle=colors[index%colors.length];ctx.fillText(`${item.year}년`,legendX+31,20)});
   series.forEach((item,index)=>{ctx.strokeStyle=colors[index%colors.length];ctx.lineWidth=3;ctx.lineJoin='round';ctx.lineCap='round';ctx.setLineDash(dashes[index%dashes.length]);ctx.beginPath();let started=false;item.values.forEach((value,month)=>{if(value==null){started=false;return}const y=valueY(value);if(started)ctx.lineTo(seriesX(month,index),y);else ctx.moveTo(seriesX(month,index),y);started=true});ctx.stroke();ctx.setLineDash([]);item.values.forEach((value,month)=>{if(value==null)return;const y=valueY(value);ctx.fillStyle='#fff';ctx.strokeStyle=colors[index%colors.length];ctx.lineWidth=2;ctx.beginPath();ctx.arc(seriesX(month,index),y,4,0,Math.PI*2);ctx.fill();ctx.stroke()})});
   const lastMonths=series.map(item=>item.values.reduce((last,value,current)=>value!=null?current:last,-1)),labelPositions=new Map();
   for(let month=0;month<12;month++){

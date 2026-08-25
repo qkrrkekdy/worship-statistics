@@ -45,11 +45,13 @@ function records(type) {
 }
 
 function weeklyDawnTotals(sundayDate, fallbackOnsite=0, fallbackOnline=0) {
+  const year=Number(sundayDate.slice(0,4));
+  const useStoredWeeklyTotal=year<=2023||sundayDate==='2025-01-05';
+  if(useStoredWeeklyTotal) return {onsite:Number(fallbackOnsite)||0,online:Number(fallbackOnline)||0};
   const sunday=new Date(`${sundayDate}T00:00:00Z`);
   const start=new Date(sunday); start.setUTCDate(start.getUTCDate()-6);
   const startDate=start.toISOString().slice(0,10);
   const items=records('dawn').filter(item=>item.date>=startDate&&item.date<sundayDate);
-  if(!items.length) return {onsite:Number(fallbackOnsite)||0,online:Number(fallbackOnline)||0};
   return items.reduce((sum,item)=>({onsite:sum.onsite+(item.onsite||0),online:sum.online+(item.online||0)}),{onsite:0,online:0});
 }
 
@@ -337,7 +339,6 @@ document.querySelectorAll('[data-entry-type]').forEach((button)=>button.addEvent
 function numberValue(form,name){return Number(form.elements[name]?.value)||0}
 function sundayPayload(form,existing) {
   const departmentTotal=['seed','sprout','spring','vision1','vision2','youth','schoolAfternoon'].reduce((sum,name)=>sum+numberValue(form,name),0);
-  const dawnWeekly=weeklyDawnTotals(form.date.value,existing?.dawnWeeklyOnsite,existing?.dawnWeeklyOnline);
   return {
     worship_date:form.date.value,
     onsite1:numberValue(form,'onsite1'),online1:numberValue(form,'online1'),onsite2:numberValue(form,'onsite2'),online2:numberValue(form,'online2'),
@@ -346,7 +347,6 @@ function sundayPayload(form,existing) {
     teacher_seed:numberValue(form,'teacherSeed'),teacher_sprout:numberValue(form,'teacherSprout'),teacher_spring:numberValue(form,'teacherSpring'),teacher_vision1:numberValue(form,'teacherVision1'),teacher_vision2:numberValue(form,'teacherVision2'),teacher_youth:0,teacher_school_afternoon:numberValue(form,'teacherSchoolAfternoon'),
     school_legacy:departmentTotal?0:numberValue(form,'schoolLegacy'),
     cell_group:numberValue(form,'cellGroup'),wednesday_onsite:numberValue(form,'wednesdayOnsite'),wednesday_online:numberValue(form,'wednesdayOnline'),
-    dawn_weekly_onsite:dawnWeekly.onsite,dawn_weekly_online:dawnWeekly.online,
     note:form.note.value.trim(),source:'manual'
   };
 }

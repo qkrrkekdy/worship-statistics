@@ -50,15 +50,15 @@ function records(type) {
   return type==='sunday'?sundayRecordsOnly():baseRecords(type).sort((a,b) => a.date.localeCompare(b.date));
 }
 
-function previousSundayDate(date) {
+function nextSundayDate(date) {
   const value=new Date(`${date}T00:00:00Z`);
   if(Number.isNaN(value.getTime())) return '';
-  value.setUTCDate(value.getUTCDate()-value.getUTCDay());
+  value.setUTCDate(value.getUTCDate()+((7-value.getUTCDay())%7));
   return value.toISOString().slice(0,10);
 }
 function wednesdayDateForSunday(sundayDate) {
   const value=new Date(`${sundayDate}T00:00:00Z`);
-  value.setUTCDate(value.getUTCDate()+3);
+  value.setUTCDate(value.getUTCDate()-4);
   return value.toISOString().slice(0,10);
 }
 function wednesdayRecords() {
@@ -399,7 +399,7 @@ $('attendance-form').addEventListener('submit',async(event)=>{
   const originalDate=original?original.split('|')[1]:null;
   if(entryType==='wednesday'){
     if(!isWednesdayDate(date)){showEntryMessage('수요예배 날짜는 실제 수요일을 선택해주세요.',true);return}
-    const sundayDate=previousSundayDate(date),target=sundayRecordsOnly().find(item=>item.date===sundayDate);
+    const sundayDate=nextSundayDate(date),target=sundayRecordsOnly().find(item=>item.date===sundayDate);
     if(!target){showEntryMessage('해당 주의 주일예배 자료가 아직 등록되지 않았습니다. 먼저 주일예배 자료를 등록해주세요.',true);return}
     setEntryPending(true);
     try{
@@ -450,7 +450,7 @@ $('entry-records').addEventListener('click',async(event)=>{
   }
   if(del&&confirm('이 출석자료를 삭제할까요?')){
     const [type,date]=del.split('|'),table=type==='sunday'||type==='wednesday'?'sunday_attendance':'dawn_attendance';setEntryPending(true);
-    try {const query=type==='wednesday'?supabaseClient.from(table).update({wednesday_onsite:0,wednesday_online:0}).eq('worship_date',previousSundayDate(date)):supabaseClient.from(table).delete().eq('worship_date',date);const {error}=await query.select('worship_date').single();if(error)throw new Error(`삭제 실패: ${error.message}`);await refreshAttendanceFromSupabase();resetForm(false);showEntryMessage(type==='wednesday'?'수요예배 값만 삭제했습니다.':'삭제했습니다.')}catch(error){console.error(error);showEntryMessage(error.message,true)}finally{setEntryPending(false)}
+    try {const query=type==='wednesday'?supabaseClient.from(table).update({wednesday_onsite:0,wednesday_online:0}).eq('worship_date',nextSundayDate(date)):supabaseClient.from(table).delete().eq('worship_date',date);const {error}=await query.select('worship_date').single();if(error)throw new Error(`삭제 실패: ${error.message}`);await refreshAttendanceFromSupabase();resetForm(false);showEntryMessage(type==='wednesday'?'수요예배 값만 삭제했습니다.':'삭제했습니다.')}catch(error){console.error(error);showEntryMessage(error.message,true)}finally{setEntryPending(false)}
   }
 });
 

@@ -40,8 +40,32 @@ function baseRecords(type) {
   }
   return normalized;
 }
+function isActualSunday(record) {
+  return Boolean(record?.date)&&new Date(`${record.date}T00:00:00Z`).getUTCDay()===0;
+}
+function sundayRecordsOnly() {
+  return baseRecords('sunday').filter(isActualSunday).sort((a,b)=>a.date.localeCompare(b.date));
+}
 function records(type) {
-  return baseRecords(type).sort((a,b) => a.date.localeCompare(b.date));
+  return type==='sunday'?sundayRecordsOnly():baseRecords(type).sort((a,b) => a.date.localeCompare(b.date));
+}
+
+function previousSundayDate(date) {
+  const value=new Date(`${date}T00:00:00Z`);
+  if(Number.isNaN(value.getTime())) return '';
+  value.setUTCDate(value.getUTCDate()-value.getUTCDay());
+  return value.toISOString().slice(0,10);
+}
+function wednesdayDateForSunday(sundayDate) {
+  const value=new Date(`${sundayDate}T00:00:00Z`);
+  value.setUTCDate(value.getUTCDate()+3);
+  return value.toISOString().slice(0,10);
+}
+function wednesdayRecords() {
+  return sundayRecordsOnly().filter(item=>(item.wednesdayOnsite||0)+(item.wednesdayOnline||0)>0).map(item=>({
+    ...item,date:wednesdayDateForSunday(item.date),sundayDate:item.date,onsite:item.wednesdayOnsite||0,
+    online:item.wednesdayOnline||0,total:(item.wednesdayOnsite||0)+(item.wednesdayOnline||0)
+  }));
 }
 
 function weeklyDawnTotals(sundayDate, fallbackOnsite=0, fallbackOnline=0) {
@@ -105,14 +129,13 @@ async function loadRecentAttendanceFromSupabase() {
   recentAttendanceState='loading';
   renderDashboardRecent();
   try {
-    const [sundayResult,dawnResult]=await Promise.all([
-      supabaseClient.from('sunday_attendance').select('*').order('worship_date',{ascending:false}).limit(1),
+    const [latestSunday,dawnResult]=await Promise.all([
+      fetchLatestActualSundayFromSupabase(),
       supabaseClient.from('dawn_attendance').select('*').order('worship_date',{ascending:false}).limit(6)
     ]);
-    if(sundayResult.error) throw new Error(`sunday_attendance 최근 조회 실패: ${sundayResult.error.message}`);
     if(dawnResult.error) throw new Error(`dawn_attendance 최근 조회 실패: ${dawnResult.error.message}`);
     recentAttendance={
-      sunday:sundayResult.data[0]?mapSupabaseSunday(sundayResult.data[0]):null,
+      sunday:latestSunday,
       dawn:dawnResult.data.map(mapSupabaseDawn).reverse()
     };
     recentAttendanceState='ready';
@@ -121,6 +144,16 @@ async function loadRecentAttendanceFromSupabase() {
     throw error;
   } finally {
     renderDashboardRecent();
+  }
+}
+
+async function fetchLatestActualSundayFromSupabase() {
+  const pageSize=32;
+  for(let from=0;;from+=pageSize){
+    const {data,error}=await supabaseClient.from('sunday_attendance').select('*').order('worship_date',{ascending:false}).range(from,from+pageSize-1);
+    if(error) throw new Error(`sunday_attendance 최근 조회 실패: ${error.message}`);
+    const latest=data.map(mapSupabaseSunday).find(isActualSunday);
+    if(latest||data.length<pageSize) return latest||null;
   }
 }
 
@@ -154,7 +187,7 @@ async function refreshAttendanceFromSupabase() {
   attendanceLoadPromise=null;
   await loadAttendanceFromSupabase();
   recentAttendance={
-    sunday:imported.sundayRecords.at(-1)||null,
+    sunday:sundayRecordsOnly().at(-1)||null,
     dawn:imported.dawnRecords.slice(-6)
   };
   recentAttendanceState='ready';
@@ -330,10 +363,14 @@ function renderDashboard() {
 function renderEntry() {
   if(!isAdmin) return;
   const selectedYear=Number($('entry-year').value),selectedMonth=$('entry-month').value;
-  const data=records(entryType).filter(item=>item.year===selectedYear&&(selectedMonth==='all'||item.month===Number(selectedMonth))).slice().reverse(); $('entry-list-title').textContent=`${entryType==='sunday'?'주일':'새벽'}예배 입력 내역`; $('entry-count').textContent=`${nf.format(data.length)}건`;
+  const source=entryType==='wednesday'?wednesdayRecords():records(entryType);
+  const data=source.filter(item=>Number(item.date.slice(0,4))===selectedYear&&(selectedMonth==='all'||Number(item.date.slice(5,7))===Number(selectedMonth))).slice().reverse();
+  const typeLabel=entryType==='sunday'?'주일':entryType==='dawn'?'새벽':'수요';
+  $('entry-list-title').textContent=`${typeLabel}예배 입력 내역`; $('entry-count').textContent=`${nf.format(data.length)}건`;
   document.querySelectorAll('[data-entry-for]').forEach((group)=>group.hidden=group.dataset.entryFor!==entryType);
-  $('entry-record-head').innerHTML=entryType==='sunday'?'<tr><th>날짜</th><th>1부 현장</th><th>1부 온라인</th><th>2부 현장</th><th>2부 온라인</th><th>오후 현장</th><th>오후 온라인</th><th>교회학교</th><th>속회</th><th>수요 현장</th><th>수요 온라인</th><th>합계</th><th>관리</th></tr>':'<tr><th>날짜</th><th>현장</th><th>온라인</th><th>합계</th><th>비고</th><th>관리</th></tr>';
-  $('entry-records').innerHTML=data.map((item)=>entryType==='sunday'?`<tr><td>${formatDate(item.date)}</td><td>${countText(item.onsite1)}</td><td>${countText(item.online1)}</td><td>${countText(item.onsite2)}</td><td>${countText(item.online2)}</td><td>${countText(item.afternoon)}</td><td>${countText(item.afternoonOnline)}</td><td>${countText(item.school)}</td><td>${countText(item.cellGroup)}</td><td>${countText(item.wednesdayOnsite)}</td><td>${countText(item.wednesdayOnline)}</td><td>${countText(item.total)}</td><td><div class="row-actions"><button data-edit="${keyOf(entryType,item.date)}">수정</button><button class="delete" data-delete="${keyOf(entryType,item.date)}">삭제</button></div></td></tr>`:`<tr><td>${formatDate(item.date)}</td><td>${countText(item.onsite)}</td><td>${countText(item.online)}</td><td>${countText(item.total)}</td><td>${item.note||'-'}</td><td><div class="row-actions"><button data-edit="${keyOf(entryType,item.date)}">수정</button><button class="delete" data-delete="${keyOf(entryType,item.date)}">삭제</button></div></td></tr>`).join('')||`<tr><td class="empty" colspan="${entryType==='sunday'?13:6}">입력된 자료가 없습니다.</td></tr>`;
+  $('entry-note-field').hidden=entryType==='wednesday';
+  $('entry-record-head').innerHTML=entryType==='sunday'?'<tr><th>날짜</th><th>1부 현장</th><th>1부 온라인</th><th>2부 현장</th><th>2부 온라인</th><th>오후 현장</th><th>오후 온라인</th><th>교회학교</th><th>속회</th><th>합계</th><th>관리</th></tr>':'<tr><th>날짜</th><th>현장</th><th>온라인</th><th>합계</th><th>비고</th><th>관리</th></tr>';
+  $('entry-records').innerHTML=data.map((item)=>entryType==='sunday'?`<tr><td>${formatDate(item.date)}</td><td>${countText(item.onsite1)}</td><td>${countText(item.online1)}</td><td>${countText(item.onsite2)}</td><td>${countText(item.online2)}</td><td>${countText(item.afternoon)}</td><td>${countText(item.afternoonOnline)}</td><td>${countText(item.school)}</td><td>${countText(item.cellGroup)}</td><td>${countText(item.total)}</td><td><div class="row-actions"><button data-edit="${keyOf(entryType,item.date)}">수정</button><button class="delete" data-delete="${keyOf(entryType,item.date)}">삭제</button></div></td></tr>`:`<tr><td>${formatDate(item.date)}</td><td>${countText(item.onsite)}</td><td>${countText(item.online)}</td><td>${countText(item.total)}</td><td>${entryType==='wednesday'?`연결 주일 ${item.sundayDate}`:item.note||'-'}</td><td><div class="row-actions"><button data-edit="${keyOf(entryType,item.date)}">수정</button><button class="delete" data-delete="${keyOf(entryType,item.date)}">삭제</button></div></td></tr>`).join('')||`<tr><td class="empty" colspan="${entryType==='sunday'?11:6}">입력된 자료가 없습니다.</td></tr>`;
 }
 document.querySelectorAll('[data-entry-type]').forEach((button)=>button.addEventListener('click',()=>{entryType=button.dataset.entryType;document.querySelectorAll('[data-entry-type]').forEach((item)=>item.classList.toggle('active',item===button));resetForm();renderEntry()}));
 function numberValue(form,name){return Number(form.elements[name]?.value)||0}
@@ -346,19 +383,32 @@ function sundayPayload(form,existing) {
     seed:numberValue(form,'seed'),sprout:numberValue(form,'sprout'),spring:numberValue(form,'spring'),vision1:numberValue(form,'vision1'),vision2:numberValue(form,'vision2'),youth:numberValue(form,'youth'),school_afternoon:numberValue(form,'schoolAfternoon'),
     teacher_seed:numberValue(form,'teacherSeed'),teacher_sprout:numberValue(form,'teacherSprout'),teacher_spring:numberValue(form,'teacherSpring'),teacher_vision1:numberValue(form,'teacherVision1'),teacher_vision2:numberValue(form,'teacherVision2'),teacher_youth:0,teacher_school_afternoon:numberValue(form,'teacherSchoolAfternoon'),
     school_legacy:departmentTotal?0:numberValue(form,'schoolLegacy'),
-    cell_group:numberValue(form,'cellGroup'),wednesday_onsite:numberValue(form,'wednesdayOnsite'),wednesday_online:numberValue(form,'wednesdayOnline'),
+    cell_group:numberValue(form,'cellGroup'),
     note:form.note.value.trim(),source:'manual'
   };
 }
 function dawnPayload(form) {
   return {worship_date:form.date.value,onsite:numberValue(form,'onsite'),online:numberValue(form,'online'),note:form.note.value.trim(),source:'manual'};
 }
+function isWednesdayDate(date){return new Date(`${date}T00:00:00Z`).getUTCDay()===3}
 $('attendance-form').addEventListener('submit',async(event)=>{
   event.preventDefault();
   if(!authReady||!isAdmin||!currentSession){showEntryMessage('관리자 로그인이 필요합니다.',true);return}
   if(entryMutationPending)return;
   const form=event.currentTarget,date=form.date.value,original=form.originalKey.value;
   const originalDate=original?original.split('|')[1]:null;
+  if(entryType==='wednesday'){
+    if(!isWednesdayDate(date)){showEntryMessage('수요예배 날짜는 실제 수요일을 선택해주세요.',true);return}
+    const sundayDate=previousSundayDate(date),target=sundayRecordsOnly().find(item=>item.date===sundayDate);
+    if(!target){showEntryMessage('해당 주의 주일예배 자료가 아직 등록되지 않았습니다. 먼저 주일예배 자료를 등록해주세요.',true);return}
+    setEntryPending(true);
+    try{
+      const {error}=await supabaseClient.from('sunday_attendance').update({wednesday_onsite:numberValue(form,'wednesdayOnsite'),wednesday_online:numberValue(form,'wednesdayOnline')}).eq('worship_date',sundayDate).select('worship_date').single();
+      if(error)throw new Error(`수요예배 ${original?'수정':'저장'} 실패: ${error.message}`);
+      await refreshAttendanceFromSupabase();resetForm(false);showEntryMessage(`수요예배를 ${sundayDate} 주일 자료에 저장했습니다.`);
+    }catch(error){console.error(error);showEntryMessage(error.message,true)}finally{setEntryPending(false)}
+    return;
+  }
   const duplicate=records(entryType).some(item=>item.date===date&&item.date!==originalDate);
   if(duplicate){showEntryMessage('같은 날짜의 같은 예배 출석자료가 이미 있습니다.',true);return}
   const existing=originalDate?records(entryType).find(item=>item.date===originalDate):null;
@@ -379,7 +429,7 @@ $('attendance-form').addEventListener('submit',async(event)=>{
   } finally {setEntryPending(false)}
 });
 function showEntryMessage(message,error=false){$('entry-message').textContent=message;$('entry-message').className=`form-message ${error?'down':'up'}`}
-function resetForm(clearMessage=true){$('attendance-form').reset();$('attendance-form').originalKey.value='';$('cancel-edit').hidden=true;if(clearMessage)$('entry-message').textContent=''}
+function resetForm(clearMessage=true){$('attendance-form').reset();$('attendance-form').originalKey.value='';$('attendance-form').elements.date.readOnly=false;$('cancel-edit').hidden=true;if(clearMessage)$('entry-message').textContent=''}
 $('cancel-edit').addEventListener('click',()=>resetForm());
 const attendanceDateInput=$('attendance-form').elements.date;
 attendanceDateInput.addEventListener('click',()=>{
@@ -391,15 +441,16 @@ $('entry-records').addEventListener('click',async(event)=>{
   if(!isAdmin||entryMutationPending)return;
   const edit=event.target.dataset.edit,del=event.target.dataset.delete;
   if(edit){
-    const [type,date]=edit.split('|'),item=records(type).find(row=>row.date===date);if(!item)return;
-    entryType=type;const form=$('attendance-form');form.originalKey.value=edit;form.date.value=item.date;
-    const fields=type==='sunday'?['onsite1','online1','onsite2','online2','afternoon','afternoonOnline','seed','sprout','spring','vision1','vision2','youth','schoolAfternoon','teacherSeed','teacherSprout','teacherSpring','teacherVision1','teacherVision2','teacherYouth','teacherSchoolAfternoon','cellGroup','wednesdayOnsite','wednesdayOnline']:['onsite','online'];
+    const [type,date]=edit.split('|'),item=(type==='wednesday'?wednesdayRecords():records(type)).find(row=>row.date===date);if(!item)return;
+    entryType=type;const form=$('attendance-form');form.originalKey.value=edit;form.date.value=item.date;form.date.readOnly=type==='wednesday';
+    const fields=type==='sunday'?['onsite1','online1','onsite2','online2','afternoon','afternoonOnline','seed','sprout','spring','vision1','vision2','youth','schoolAfternoon','teacherSeed','teacherSprout','teacherSpring','teacherVision1','teacherVision2','teacherYouth','teacherSchoolAfternoon','cellGroup']:type==='dawn'?['onsite','online']:[];
+    if(type==='wednesday'){form.elements.wednesdayOnsite.value=item.onsite||'';form.elements.wednesdayOnline.value=item.online||''}
     fields.forEach(field=>form.elements[field].value=item[field]||'');form.schoolLegacy.value=item.schoolLegacy||item.school||0;form.note.value=item.note||'';
     $('cancel-edit').hidden=false;document.querySelectorAll('[data-entry-type]').forEach(button=>button.classList.toggle('active',button.dataset.entryType===type));renderEntry();window.scrollTo({top:0,behavior:'smooth'});return;
   }
   if(del&&confirm('이 출석자료를 삭제할까요?')){
-    const [type,date]=del.split('|'),table=type==='sunday'?'sunday_attendance':'dawn_attendance';setEntryPending(true);
-    try {const {error}=await supabaseClient.from(table).delete().eq('worship_date',date).select('worship_date').single();if(error)throw new Error(`삭제 실패: ${error.message}`);await refreshAttendanceFromSupabase();resetForm(false);showEntryMessage('삭제했습니다.')}catch(error){console.error(error);showEntryMessage(error.message,true)}finally{setEntryPending(false)}
+    const [type,date]=del.split('|'),table=type==='sunday'||type==='wednesday'?'sunday_attendance':'dawn_attendance';setEntryPending(true);
+    try {const query=type==='wednesday'?supabaseClient.from(table).update({wednesday_onsite:0,wednesday_online:0}).eq('worship_date',previousSundayDate(date)):supabaseClient.from(table).delete().eq('worship_date',date);const {error}=await query.select('worship_date').single();if(error)throw new Error(`삭제 실패: ${error.message}`);await refreshAttendanceFromSupabase();resetForm(false);showEntryMessage(type==='wednesday'?'수요예배 값만 삭제했습니다.':'삭제했습니다.')}catch(error){console.error(error);showEntryMessage(error.message,true)}finally{setEntryPending(false)}
   }
 });
 

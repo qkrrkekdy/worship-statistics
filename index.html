@@ -67,7 +67,7 @@
         <p id="admin-auth-message" class="form-message" role="status"></p>
       </article>
       <div id="admin-entry-area" hidden>
-      <div class="type-tabs"><button class="active" data-entry-type="sunday">주일예배</button><button data-entry-type="dawn">새벽예배</button></div>
+      <div class="type-tabs"><button class="active" data-entry-type="sunday">주일예배</button><button data-entry-type="dawn">새벽예배</button><button data-entry-type="wednesday">수요예배</button></div>
       <article class="panel entry-panel">
         <form id="attendance-form">
           <input type="hidden" name="originalKey">
@@ -76,9 +76,10 @@
           <div class="entry-group" data-entry-for="sunday"><strong>주일 낮예배</strong><label>1부 현장<input type="number" name="onsite1" min="0"></label><label>1부 온라인<input type="number" name="online1" min="0"></label><label>2부 현장<input type="number" name="onsite2" min="0"></label><label>2부 온라인<input type="number" name="online2" min="0"></label></div>
           <div class="entry-group" data-entry-for="sunday"><strong>오후예배</strong><label>현장<input type="number" name="afternoon" min="0"></label><label>온라인<input type="number" name="afternoonOnline" min="0"></label></div>
           <div class="entry-group school-entry-group" data-entry-for="sunday"><strong>교회학교 학생</strong><label>씨앗 학생<input type="number" name="seed" min="0"></label><label>새싹 학생<input type="number" name="sprout" min="0"></label><label>새봄 학생<input type="number" name="spring" min="0"></label><label>비전1 학생<input type="number" name="vision1" min="0"></label><label>비전2 학생<input type="number" name="vision2" min="0"></label><label>젊은이 학생<input type="number" name="youth" min="0"></label><label>어린이오후예배 학생<input type="number" name="schoolAfternoon" min="0"></label><strong>교회학교 교사</strong><label>씨앗 교사<input type="number" name="teacherSeed" min="0"></label><label>새싹 교사<input type="number" name="teacherSprout" min="0"></label><label>새봄 교사<input type="number" name="teacherSpring" min="0"></label><label>비전1 교사<input type="number" name="teacherVision1" min="0"></label><label>비전2 교사<input type="number" name="teacherVision2" min="0"></label><label>젊은이 교사 (입력 안 함)<input type="number" name="teacherYouth" value="0" disabled></label><label>어린이오후예배 교사<input type="number" name="teacherSchoolAfternoon" min="0"></label></div>
-          <div class="entry-group" data-entry-for="sunday"><strong>주중예배</strong><label>속회<input type="number" name="cellGroup" min="0"></label><label>수요 현장<input type="number" name="wednesdayOnsite" min="0"></label><label>수요 온라인<input type="number" name="wednesdayOnline" min="0"></label></div>
+          <div class="entry-group" data-entry-for="sunday"><strong>주중예배</strong><label>속회<input type="number" name="cellGroup" min="0"></label></div>
           <div class="entry-group" data-entry-for="dawn" hidden><strong>새벽예배</strong><label>현장<input type="number" name="onsite" min="0"></label><label>온라인<input type="number" name="online" min="0"></label></div>
-          <label class="note-field">비고<input type="text" name="note" maxlength="200" placeholder="특별예배 등 필요한 내용을 입력하세요"></label>
+          <div class="entry-group" data-entry-for="wednesday" hidden><strong>수요예배</strong><p>실제 수요일 날짜를 입력하면 직전 일요일의 주일예배 자료에 연결됩니다.</p><label>현장<input type="number" name="wednesdayOnsite" min="0"></label><label>온라인<input type="number" name="wednesdayOnline" min="0"></label></div>
+          <label id="entry-note-field" class="note-field">비고<input type="text" name="note" maxlength="200" placeholder="특별예배 등 필요한 내용을 입력하세요"></label>
           <div class="form-actions"><button class="secondary-button" id="cancel-edit" type="button" hidden>취소</button><button class="primary-button" type="submit">저장</button></div>
         </form>
         <p id="entry-message" class="form-message" role="status"></p>
@@ -138,6 +139,6 @@
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
-  <script src="app.js?v=20260825-2"></script>
+  <script src="app.js?v=20260828-1"></script>
 </body>
 </html>

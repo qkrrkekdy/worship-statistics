@@ -2,6 +2,7 @@ const nf = new Intl.NumberFormat('ko-KR');
 const currentYear = new Date().getFullYear();
 const colors = ['#0057B8','#E87500','#008A3B','#D62828','#6A00B8','#00A6D6','#CC79A7','#8C564B','#6B8E23','#2F2F2F'];
 const WEEK_SLOT_ONLY_NOTE = '__WEEK_SLOT_ONLY__';
+const AUTO_WEEKLY_DAWN_START_DATE = '2026-09-01';
 let imported = { sundayRecords: [], dawnRecords: [], importedAt: null };
 let supabaseClient = null;
 let attendanceLoadPromise = null;
@@ -87,6 +88,22 @@ function weeklyDawnTotals(sundayDate, fallbackOnsite=0, fallbackOnline=0) {
   const startDate=start.toISOString().slice(0,10);
   const items=records('dawn').filter(item=>item.date>=startDate&&item.date<sundayDate);
   return items.reduce((sum,item)=>({onsite:sum.onsite+(item.onsite||0),online:sum.online+(item.online||0)}),{onsite:0,online:0});
+}
+
+function usesAutomaticWeeklyDawn(sundayDate) {
+  return Boolean(sundayDate)&&sundayDate>=AUTO_WEEKLY_DAWN_START_DATE;
+}
+
+async function syncStoredWeeklyDawn(sundayDate) {
+  if(!usesAutomaticWeeklyDawn(sundayDate)) return;
+  const target=allSundayWeekRows().find(item=>item.date===sundayDate);
+  if(!target) return;
+  const totals=weeklyDawnTotals(sundayDate);
+  const {error}=await supabaseClient.from('sunday_attendance').update({
+    dawn_weekly_onsite:totals.onsite,
+    dawn_weekly_online:totals.online
+  }).eq('worship_date',sundayDate).select('worship_date').single();
+  if(error) throw new Error(`주간 새벽예배 합계 동기화 실패: ${error.message}`);
 }
 
 function sundayDatesInMonth(year,month) {
@@ -386,7 +403,8 @@ function renderDashboardStatistics() {
   drawReadableLines('dashboard-sunday-chart',sunday,dashboardYears,(item)=>(item.onsite||0)+(item.online||0));
   drawReadableLines('dashboard-afternoon-chart',sunday,dashboardYears,(item)=>(item.afternoon||0)+(item.afternoonOnline||0));
   drawReadableLines('dashboard-dawn-chart',dawn,dashboardYears,(item)=>item.total,50);
-  drawReadableLines('dashboard-wednesday-chart',sunday,dashboardYears,(item)=>(item.wednesdayOnsite||0)+(item.wednesdayOnline||0),null,true);
+  const wednesdayChartRows=wednesdayRecords().filter(item=>(item.onsite||0)+(item.online||0)>0);
+  drawReadableLines('dashboard-wednesday-chart',wednesdayChartRows,dashboardYears,(item)=>(item.onsite||0)+(item.online||0),null,true);
 }
 
 function renderDashboard() {
@@ -411,6 +429,7 @@ document.querySelectorAll('[data-entry-type]').forEach((button)=>button.addEvent
 function numberValue(form,name){return Number(form.elements[name]?.value)||0}
 function sundayPayload(form,existing) {
   const departmentTotal=['seed','sprout','spring','vision1','vision2','youth','schoolAfternoon'].reduce((sum,name)=>sum+numberValue(form,name),0);
+  const dawnTotals=weeklyDawnTotals(form.date.value,existing?.dawnWeeklyOnsite,existing?.dawnWeeklyOnline);
   return {
     worship_date:form.date.value,
     onsite1:numberValue(form,'onsite1'),online1:numberValue(form,'online1'),onsite2:numberValue(form,'onsite2'),online2:numberValue(form,'online2'),
@@ -419,6 +438,7 @@ function sundayPayload(form,existing) {
     teacher_seed:numberValue(form,'teacherSeed'),teacher_sprout:numberValue(form,'teacherSprout'),teacher_spring:numberValue(form,'teacherSpring'),teacher_vision1:numberValue(form,'teacherVision1'),teacher_vision2:numberValue(form,'teacherVision2'),teacher_youth:0,teacher_school_afternoon:numberValue(form,'teacherSchoolAfternoon'),
     school_legacy:departmentTotal?0:numberValue(form,'schoolLegacy'),
     cell_group:numberValue(form,'cellGroup'),
+    ...(usesAutomaticWeeklyDawn(form.date.value)?{dawn_weekly_onsite:dawnTotals.onsite,dawn_weekly_online:dawnTotals.online}:{}),
     note:form.note.value.trim(),source:'manual'
   };
 }
@@ -446,7 +466,7 @@ $('attendance-form').addEventListener('submit',async(event)=>{
         ({error}=await supabaseClient.from('sunday_attendance').update(payload).eq('worship_date',sundayDate).select('worship_date').single());
       }
       if(error)throw new Error(`수요예배 ${original?'수정':'저장'} 실패: ${error.message}`);
-      await refreshAttendanceFromSupabase();resetForm(false);showEntryMessage(`수요예배를 ${sundayDate} 주일 자료에 저장했습니다.`);
+      await refreshAttendanceFromSupabase();await syncStoredWeeklyDawn(sundayDate);await refreshAttendanceFromSupabase();resetForm(false);showEntryMessage(`수요예배를 ${sundayDate} 주일 자료에 저장했습니다.`);
     }catch(error){console.error(error);showEntryMessage(error.message,true)}finally{setEntryPending(false)}
     return;
   }
@@ -465,6 +485,11 @@ $('attendance-form').addEventListener('submit',async(event)=>{
         : supabaseClient.from(table).insert(payload);
     const {error}=await query.select('worship_date').single();
     if(error) throw new Error(`${originalDate?'수정':'저장'} 실패: ${error.message}`);
+    if(entryType==='dawn') {
+      await refreshAttendanceFromSupabase();
+      if(originalDate&&nextSundayDate(originalDate)!==nextSundayDate(date)) await syncStoredWeeklyDawn(nextSundayDate(originalDate));
+      await syncStoredWeeklyDawn(nextSundayDate(date));
+    }
     await refreshAttendanceFromSupabase();
     resetForm(false);
     showEntryMessage(originalDate?'수정했습니다.':'저장했습니다.');
@@ -494,7 +519,7 @@ $('entry-records').addEventListener('click',async(event)=>{
   }
   if(del&&confirm('이 출석자료를 삭제할까요?')){
     const [type,date]=del.split('|'),table=type==='sunday'||type==='wednesday'?'sunday_attendance':'dawn_attendance';setEntryPending(true);
-    try {const sundayDate=type==='wednesday'?nextSundayDate(date):'';const weekRow=type==='wednesday'?allSundayWeekRows().find(item=>item.date===sundayDate):null;const removeEmptySlot=weekRow&&isWeekSlotOnly(weekRow)&&!(weekRow.cellGroup||weekRow.dawnWeeklyOnsite||weekRow.dawnWeeklyOnline);const query=type==='wednesday'?(removeEmptySlot?supabaseClient.from(table).delete().eq('worship_date',sundayDate):supabaseClient.from(table).update({wednesday_onsite:0,wednesday_online:0}).eq('worship_date',sundayDate)):supabaseClient.from(table).delete().eq('worship_date',date);const {error}=await query.select('worship_date').single();if(error)throw new Error(`삭제 실패: ${error.message}`);await refreshAttendanceFromSupabase();resetForm(false);showEntryMessage(type==='wednesday'?'수요예배 값만 삭제했습니다.':'삭제했습니다.')}catch(error){console.error(error);showEntryMessage(error.message,true)}finally{setEntryPending(false)}
+    try {const sundayDate=type==='wednesday'?nextSundayDate(date):'';const weekRow=type==='wednesday'?allSundayWeekRows().find(item=>item.date===sundayDate):null;const removeEmptySlot=weekRow&&isWeekSlotOnly(weekRow)&&!(weekRow.cellGroup||weekRow.dawnWeeklyOnsite||weekRow.dawnWeeklyOnline);const query=type==='wednesday'?(removeEmptySlot?supabaseClient.from(table).delete().eq('worship_date',sundayDate):supabaseClient.from(table).update({wednesday_onsite:0,wednesday_online:0}).eq('worship_date',sundayDate)):supabaseClient.from(table).delete().eq('worship_date',date);const {error}=await query.select('worship_date').single();if(error)throw new Error(`삭제 실패: ${error.message}`);await refreshAttendanceFromSupabase();if(type==='dawn')await syncStoredWeeklyDawn(nextSundayDate(date));await refreshAttendanceFromSupabase();resetForm(false);showEntryMessage(type==='wednesday'?'수요예배 값만 삭제했습니다.':'삭제했습니다.')}catch(error){console.error(error);showEntryMessage(error.message,true)}finally{setEntryPending(false)}
   }
 });
 
@@ -577,8 +602,8 @@ function renderMonthly(){
     const triple=(fieldA,fieldB,enteredFor=()=>true)=>sunday.map(item=>{if(!enteredFor(item))return blankTriple();const onsite=item[fieldA]||0,online=item[fieldB]||0;return `<td>${nf.format(onsite)}</td><td>${nf.format(online)}</td><td><strong>${nf.format(onsite+online)}</strong></td>`}).join('');
     const schoolTriple=(valueFor,enteredFor=()=>true)=>sunday.map(item=>enteredFor(item)?`<td class="empty-department">—</td><td class="empty-department">—</td><td>${nf.format(Math.round(valueFor(item)))}</td>`:blankTriple()).join('');
     const weekdayValue=item=>(item.dawnEntered?(item.dawnWeeklyOnsite||0)+(item.dawnWeeklyOnline||0):0)+(item.wednesdayEntered?(item.wednesdayOnsite||0)+(item.wednesdayOnline||0):0)+(item.sundayEntered?(item.cellGroup||0):0);
-    const displayedWeekdayValue=item=>item.sundayEntered?(item.weekdayTotal||0):weekdayValue(item);
-    const displayedGrandValue=item=>item.sundayEntered?(item.weeklyGrandTotal||0):weekdayValue(item);
+    const displayedWeekdayValue=item=>usesAutomaticWeeklyDawn(item.date)?weekdayValue(item):(item.sundayEntered?(item.weekdayTotal||0):weekdayValue(item));
+    const displayedGrandValue=item=>usesAutomaticWeeklyDawn(item.date)?(item.sundayEntered?(item.total||0):0)+weekdayValue(item):(item.sundayEntered?(item.weeklyGrandTotal||0):weekdayValue(item));
     const weekdayEntered=item=>item.dawnEntered||item.wednesdayEntered||item.sundayEntered;
     $('monthly-sunday-records').innerHTML=`
       <tr class="worship-subtotal"><td>주일낮예배</td>${triple('onsite','online',item=>item.sundayEntered)}</tr>

@@ -107,11 +107,13 @@ table { width:100%; border-collapse:collapse; font-size:12px; white-space:nowrap
 #admin-login-form label { display:flex; min-width:210px; flex-direction:column; gap:6px; color:var(--muted); font-size:12px; }
 #admin-login-form input { min-height:42px; }
 .admin-session-view strong { display:block; margin-top:8px; }
+.admin-session-actions,.admin-password-actions { display:flex; gap:8px; }
 .admin-password-form { display:grid; grid-template-columns:1fr repeat(3,minmax(150px,1fr)) auto; align-items:end; gap:12px; margin-top:20px; padding-top:20px; border-top:1px solid var(--line); }
 .admin-password-form[hidden] { display:none!important; }
 .admin-password-form>strong { align-self:center; }
 .admin-password-form label { display:flex; flex-direction:column; gap:6px; color:var(--muted); font-size:12px; }
 .admin-password-form input { min-height:42px; }
+.admin-password-actions button { white-space:nowrap; }
 .admin-status-badge { display:inline-block; padding:4px 9px; border-radius:20px; background:#e8eeeb; color:var(--green); font-size:11px; font-weight:700; }
 .admin-status-badge.denied { background:#f5e9e7; color:var(--red); }
 #admin-entry-area[hidden] { display:none!important; }
@@ -163,14 +165,14 @@ input,select { min-height:40px; padding:8px 10px; border:1px solid #cfd8d4; bord
   .entry-panel form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:end;gap:14px}.entry-panel form>label,.entry-panel .note-field{min-width:0;flex:none}.entry-panel form>.entry-group,.entry-panel form>.form-actions,.entry-panel form>.note-field{grid-column:1/-1}
   .entry-group,.school-entry-group{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:16px}.entry-group label{min-width:0}.entry-panel input,.entry-panel select{width:100%;min-height:50px;padding:11px 12px;font-size:16px}
   .form-actions{justify-content:stretch}.form-actions button{min-height:50px;flex:1;padding:11px 18px;font-size:15px}.row-actions button{min-height:42px;padding:8px 12px}
-  #admin-login-view,.admin-session-view{align-items:stretch;flex-direction:column;gap:18px}#admin-login-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:end;width:100%}#admin-login-form label{min-width:0}#admin-login-form input,#admin-login-form button,#admin-logout{min-height:50px;font-size:16px}#admin-login-form button{grid-column:1/-1}
+  #admin-login-view,.admin-session-view{align-items:stretch;flex-direction:column;gap:18px}#admin-login-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:end;width:100%}#admin-login-form label{min-width:0}#admin-login-form input,#admin-login-form button,#admin-logout,#admin-password-toggle{min-height:50px;font-size:16px}#admin-login-form button{grid-column:1/-1}.admin-session-actions{justify-content:flex-end}
   .admin-password-form{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-password-form>strong{grid-column:1/-1}.admin-password-form label:first-of-type{grid-column:1/-1}.admin-password-form button{min-height:50px}
   .entry-list-controls,.inline-filters,.section-controls,.report-controls{flex-wrap:wrap}.filter select{min-height:46px}.type-tabs button{min-height:48px}
 }
 @media(max-width:480px){
   .main-content{padding-right:10px;padding-left:10px}.panel{padding-right:14px;padding-left:14px}.comparison-delta{grid-template-columns:1fr}
   .entry-panel form,.entry-group,.school-entry-group,#admin-login-form{grid-template-columns:1fr}.entry-panel form>label,.entry-panel form>.note-field{grid-column:1/-1}
-  .admin-password-form{grid-template-columns:1fr}.admin-password-form label,.admin-password-form label:first-of-type,.admin-password-form button{grid-column:1/-1}
+  .admin-password-form{grid-template-columns:1fr}.admin-password-form label,.admin-password-form label:first-of-type,.admin-password-actions{grid-column:1/-1}.admin-password-actions button{flex:1}
   .type-tabs button{min-width:0;flex:1}.entry-list-controls{align-items:stretch;flex-direction:column}.entry-list-controls .filter{justify-content:space-between}.entry-list-controls .filter select{flex:1}
   .form-actions{flex-direction:column}.form-actions button{width:100%}.chart,.chart.small,.chart.tall{height:440px}#dashboard .chart{height:460px}
 }

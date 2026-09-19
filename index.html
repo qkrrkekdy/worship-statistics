@@ -62,14 +62,17 @@
         </div>
         <div id="admin-session-view" class="admin-session-view" hidden>
           <div><span id="admin-status-badge" class="admin-status-badge">확인 중</span><strong id="admin-session-email"></strong><p id="admin-session-message"></p></div>
-          <button id="admin-logout" class="secondary-button" type="button">로그아웃</button>
+          <div class="admin-session-actions">
+            <button id="admin-password-toggle" class="secondary-button" type="button" hidden>비밀번호 변경</button>
+            <button id="admin-logout" class="secondary-button" type="button">로그아웃</button>
+          </div>
         </div>
         <form id="admin-password-form" class="admin-password-form" hidden>
           <strong>관리자 비밀번호 변경</strong>
           <label>현재 비밀번호<input type="password" name="currentPassword" autocomplete="current-password" required></label>
           <label>새 비밀번호<input type="password" name="newPassword" autocomplete="new-password" minlength="8" required></label>
           <label>새 비밀번호 확인<input type="password" name="confirmPassword" autocomplete="new-password" minlength="8" required></label>
-          <button class="secondary-button" type="submit">비밀번호 변경</button>
+          <div class="admin-password-actions"><button id="admin-password-cancel" class="secondary-button" type="button">취소</button><button class="primary-button" type="submit">변경하기</button></div>
         </form>
         <p id="admin-auth-message" class="form-message" role="status"></p>
       </article>
@@ -146,6 +149,6 @@
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
-  <script src="app.js?v=20260919-1"></script>
+  <script src="app.js?v=20260919-2"></script>
 </body>
 </html>

@@ -269,6 +269,7 @@ function updateAdminUI() {
   const loggedIn=Boolean(currentSession?.user);
   $('admin-login-view').hidden=loggedIn;
   $('admin-session-view').hidden=!loggedIn;
+  $('admin-password-form').hidden=!isAdmin;
   $('admin-entry-area').hidden=!isAdmin;
   $('admin-session-email').textContent=loggedIn?currentSession.user.email||'':'';
   $('admin-status-badge').textContent=isAdmin?'관리자':'권한 없음';
@@ -755,6 +756,26 @@ $('admin-login-form').addEventListener('submit',async(event)=>{
 $('admin-logout').addEventListener('click',async()=>{
   $('admin-logout').disabled=true;
   try {const {error}=await supabaseClient.auth.signOut();if(error)throw new Error(`로그아웃 실패: ${error.message}`);setAuthMessage('로그아웃했습니다.')}catch(error){console.error(error);setAuthMessage(error.message,true)}finally{$('admin-logout').disabled=false}
+});
+$('admin-password-form').addEventListener('submit',async(event)=>{
+  event.preventDefault();
+  const form=event.currentTarget,button=form.querySelector('button[type="submit"]');
+  const currentPassword=form.currentPassword.value;
+  const newPassword=form.newPassword.value;
+  const confirmPassword=form.confirmPassword.value;
+  if(newPassword!==confirmPassword){setAuthMessage('새 비밀번호와 확인값이 일치하지 않습니다.',true);return}
+  if(currentPassword===newPassword){setAuthMessage('현재 비밀번호와 다른 새 비밀번호를 입력하세요.',true);return}
+  button.disabled=true;
+  setAuthMessage('비밀번호를 변경하는 중입니다.');
+  try {
+    const {error}=await supabaseClient.auth.updateUser({password:newPassword,current_password:currentPassword});
+    if(error) throw new Error(`비밀번호 변경 실패: ${error.message}`);
+    form.reset();
+    await supabaseClient.auth.signOut();
+    window.setTimeout(()=>setAuthMessage('비밀번호가 변경되었습니다. 새 비밀번호로 다시 로그인하세요.'),50);
+  } catch(error) {
+    console.error(error);setAuthMessage(error.message,true);
+  } finally {button.disabled=false}
 });
 initializeSupabaseClient();
 populateFilters();

@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#234b40">
   <title>인천중앙교회 예배 현황</title>
   <link rel="stylesheet" href="styles.css?v=20260825-2">
+  <link rel="stylesheet" href="dawn-daily.css">
 </head>
 <body>
   <header class="mobile-header">
@@ -18,7 +19,8 @@
   <aside id="primary-sidebar" class="sidebar">
     <button class="brand" type="button" data-page="dashboard"><span>✦</span><strong>인천중앙교회</strong><small>예배 출석 관리</small></button>
     <nav class="main-nav" aria-label="주요 메뉴">
-      <button class="active" data-page="dashboard"><span>▦</span>메인보드</button>
+      <button class="active" data-page="dashboard"><span>▦</span>대시보드</button>
+      <button data-page="dawn-daily"><span>▦</span>새벽 일별 현황</button>
       <button data-page="monthly"><span>▣</span>월별 현황</button>
       <button data-page="yearly"><span>▤</span>연도별 현황</button>
       <button data-page="compare"><span>⇄</span>비교분석</button>
@@ -27,9 +29,16 @@
   </aside>
 
   <main class="main-content">
+    <section id="dawn-daily" class="page">
+      <div class="page-title"><div><p class="eyebrow">DAWN DAILY ATTENDANCE</p><h1>새벽 일별 현황</h1><p>월별 현장·온라인 출석을 확인하는 연간 조회표입니다.</p></div></div>
+      <div class="panel dd-controls"><label class="filter">연도<select id="dd-year" aria-label="조회 연도"></select></label><button id="dd-refresh" class="secondary-button" type="button">새로고침</button><button id="dd-export" class="primary-button" type="button" disabled>엑셀 다운로드</button><button id="dd-print" class="secondary-button" type="button" disabled>인쇄</button></div>
+      <p id="dd-status" role="status" aria-live="polite"></p>
+      <p class="dd-help">단위: 명 · — 미입력 · 0 실제 0명 · 음영은 미래 날짜 · 일요일은 실제 기록이 있을 때만 표시합니다. 평균은 각 항목에 수치가 기록된 날짜 기준이며 소수 첫째 자리까지 표시합니다. 일별 자료가 없는 기간의 주간 합계는 일별 수치로 환산하지 않습니다.</p>
+      <div id="dd-months"></div>
+    </section>
     <div id="app-data-status" class="data-loading-status" role="status">전체 통계를 불러오는 중…</div>
     <section id="dashboard" class="page active">
-      <div class="page-title"><div><p class="eyebrow">WORSHIP DASHBOARD</p><h1>메인보드</h1><p>2022년부터 현재까지의 예배 출석 흐름입니다.</p></div><span id="dashboard-period" class="period-badge"></span></div>
+      <div class="page-title"><div><p class="eyebrow">WORSHIP DASHBOARD</p><h1>대시보드</h1><p>2022년부터 현재까지의 예배 출석 흐름입니다.</p></div><span id="dashboard-period" class="period-badge"></span></div>
       <div class="dashboard-summary metric-cards dashboard-kpis">
         <article class="latest-sunday-card"><span>최근 주일 낮예배</span><div class="latest-sunday-values"><div><small>현장</small><strong id="dashboard-latest-sunday-onsite">—</strong></div><div><small>온라인</small><strong id="dashboard-latest-sunday-online">—</strong></div><div><small>합계</small><strong id="dashboard-latest-sunday">—</strong></div></div><div class="latest-sunday-school"><small>교회학교</small><strong id="dashboard-latest-sunday-school">—</strong></div><small id="dashboard-latest-sunday-date">—</small></article>
         <article class="year-sunday-card"><span>최근 주일 낮예배 부별 현황</span><div class="year-sunday-values"><div><small>1부 현장</small><strong id="dashboard-year-sunday-onsite1">—</strong></div><div><small>1부 온라인</small><strong id="dashboard-year-sunday-online1">—</strong></div><div class="service-total"><small>1부 합계</small><strong id="dashboard-year-sunday-total1">—</strong></div><div><small>2부 현장</small><strong id="dashboard-year-sunday-onsite2">—</strong></div><div><small>2부 온라인</small><strong id="dashboard-year-sunday-online2">—</strong></div><div class="service-total"><small>2부 합계</small><strong id="dashboard-year-sunday-total2">—</strong></div></div><small id="dashboard-year-sunday-period">—</small></article>
@@ -144,11 +153,12 @@
 
     <section id="settings" class="page">
       <div class="page-title"><div><p class="eyebrow">SETTINGS</p><h1>설정</h1><p>프로그램의 기본 표시 내용을 설정합니다.</p></div></div>
-      <article class="panel settings-panel"><form id="settings-form"><label>교회 이름<input name="churchName" type="text" value="인천중앙교회"></label><label>기본 화면<select name="defaultPage"><option value="dashboard">메인보드</option><option value="entry">출석입력</option><option value="yearly">연도별 현황</option></select></label><button class="primary-button" type="submit">설정 저장</button></form><p id="settings-message" class="form-message"></p></article>
+      <article class="panel settings-panel"><form id="settings-form"><label>교회 이름<input name="churchName" type="text" value="인천중앙교회"></label><label>기본 화면<select name="defaultPage"><option value="dashboard">대시보드</option><option value="entry">출석입력</option><option value="yearly">연도별 현황</option></select></label><button class="primary-button" type="submit">설정 저장</button></form><p id="settings-message" class="form-message"></p></article>
     </section>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
   <script src="app.js?v=20260919-2"></script>
+  <script type="module" src="dawn-daily/page.mjs"></script>
 </body>
 </html>

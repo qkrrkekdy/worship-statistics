@@ -1,1 +1,20 @@
 .vercel
+
+# Local-only development tools and verification artifacts. Keep files on disk.
+/tools/
+/tests/
+/docs/
+/analysis/README.md
+/.local-test/
+/node_modules/
+/_site/
+/.jekyll-cache/
+/.env
+/.env.*
+/*.pem
+/*.key
+/*.pfx
+/*.log
+/.site-output/
+# Retain the earlier Pages-only configuration locally; production uses Vercel.
+/_config.yml

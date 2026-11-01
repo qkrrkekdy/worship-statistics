@@ -1,0 +1,23 @@
+# Upload only reviewed build inputs. Runtime publication is restricted again by build-site.mjs.
+/*
+!/vercel.json
+!/build-site.mjs
+!/index.html
+!/app.js
+!/styles.css
+!/supabase-config.js
+!/dawn-daily.css
+!/analysis/
+/analysis/*
+!/analysis/catalog.mjs
+!/analysis/dates.mjs
+!/analysis/reader.mjs
+!/analysis/engine.mjs
+!/dawn-daily/
+/dawn-daily/*
+!/dawn-daily/model.mjs
+!/dawn-daily/page.mjs
+!/dawn-daily/xlsx.mjs
+!/data/
+/data/*
+!/data/worship-data.json

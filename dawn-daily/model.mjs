@@ -16,6 +16,8 @@ export function buildYear(rows, year, today = todayKorea()) {
     for (let day = 1; day <= new Date(Date.UTC(year,m+1,0)).getUTCDate(); day++) {
       const date = `${year}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
       const weekday = new Date(`${date}T00:00:00Z`).getUTCDay(), row = byDate.get(date);
+      // This read-only view excludes Sundays even when the source contains a record.
+      if (weekday === 0) continue;
       const onsite = number(row?.onsite), online = number(row?.online);
       const computed = onsite !== null && online !== null ? onsite + online : null;
       const total = number(row?.total) ?? computed;

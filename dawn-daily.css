@@ -1,21 +1,24 @@
 #dawn-daily { min-width:0; }
 #dawn-daily .dd-controls { display:flex; flex-wrap:wrap; align-items:end; gap:12px; }
-#dawn-daily .dd-help,#dd-status { font-size:12px; line-height:1.8; color:var(--muted); }
-#dawn-daily .dd-month { margin-bottom:26px; padding:18px; min-width:0; }
+#dd-status { font-size:12px; line-height:1.8; color:var(--muted); }
+#dawn-daily .dd-month { margin-bottom:26px; padding:12px; min-width:0; }
 #dawn-daily h2 { margin-bottom:14px; }
-#dawn-daily h2 small { margin-left:12px; font-size:11px; font-weight:400; color:var(--muted); }
 #dawn-daily .dd-scroll { overflow-x:auto; max-width:100%; border:1px solid var(--line); }
-#dawn-daily .dd-table { width:100%; min-width:1650px; border-collapse:separate; border-spacing:0; table-layout:fixed; font-size:12px; font-variant-numeric:tabular-nums; }
+#dawn-daily .dd-table { width:100%; border-collapse:separate; border-spacing:0; table-layout:fixed; font-size:12px; font-variant-numeric:tabular-nums; }
 #dawn-daily caption { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
-#dawn-daily .dd-table th,#dawn-daily .dd-table td { padding:10px 3px; text-align:center; vertical-align:middle; border-right:1px solid var(--line); border-bottom:1px solid var(--line); white-space:normal; overflow-wrap:anywhere; }
-#dawn-daily .dd-table th:first-child { position:sticky; left:0; z-index:2; width:90px; background:var(--mint); color:var(--nav); }
-#dawn-daily .dd-table th:last-child,#dawn-daily .dd-table td:last-child { width:120px; background:var(--mint); font-weight:700; color:var(--nav); }
+#dawn-daily .dd-table th,#dawn-daily .dd-table td { padding:9px 1px; text-align:center; vertical-align:middle; border-right:1px solid var(--line); border-bottom:1px solid var(--line); white-space:nowrap; }
+#dawn-daily .dd-table th:first-child { position:sticky; left:0; z-index:2; width:46px; background:var(--mint); color:var(--nav); }
+#dawn-daily .dd-table th:last-child,#dawn-daily .dd-table td:last-child { width:62px; background:var(--mint); font-weight:700; color:var(--nav); }
 #dawn-daily .dd-table thead { background:#f4f7f5; }
-#dawn-daily .dd-table .dd-future { background:#edf0f2; color:#687480; }
-#dawn-daily .dd-table .dd-note { font-size:10px; line-height:1.6; }
-@media(max-width:768px) {
-  #dawn-daily .dd-month { padding:12px; }
-  #dawn-daily h2 small { display:block; margin:7px 0 0; }
+#dawn-daily .dd-note-trigger { display:block; width:100%; max-width:100%; padding:0; border:0; background:none; color:inherit; font:inherit; font-size:11px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; cursor:pointer; }
+#dawn-daily .dd-note-trigger:focus-visible { outline:2px solid var(--green); outline-offset:-2px; }
+#dd-note-dialog { width:min(560px,90vw); max-height:80vh; padding:24px; border:1px solid var(--line); border-radius:5px; color:var(--ink); }
+#dd-note-dialog::backdrop { background:rgb(0 0 0 / 30%); }
+#dd-note-full { white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.8; }
+@media(max-width:1439px) {
+  #dawn-daily .dd-table { min-width:1380px; }
+  #dawn-daily .dd-table th:first-child { width:64px; }
+  #dawn-daily .dd-table th:last-child,#dawn-daily .dd-table td:last-child { width:80px; }
 }
 @media print {
   @page dawn-daily { size:A4 landscape; margin:8mm; }
@@ -23,12 +26,13 @@
   body.dd-printing #report.page { display:none!important; }
   body.dd-printing #dawn-daily.page { display:block!important; max-width:none; page:dawn-daily; }
   body.dd-printing .main-content { margin:0!important; padding:0!important; }
-  body.dd-printing #dawn-daily .dd-controls,body.dd-printing #dawn-daily .dd-help,body.dd-printing #dd-status { display:none!important; }
+  body.dd-printing #dawn-daily .dd-controls,body.dd-printing #dd-status,body.dd-printing #dd-note-dialog { display:none!important; }
   body.dd-printing #dawn-daily .dd-month { break-after:page; break-inside:avoid; margin:0; padding:0; }
   body.dd-printing #dawn-daily .dd-month:last-child { break-after:auto; }
   body.dd-printing #dawn-daily .dd-scroll { overflow:visible; }
   body.dd-printing #dawn-daily .dd-table { min-width:0; width:100%; font-size:8pt; }
   body.dd-printing #dawn-daily .dd-table th,body.dd-printing #dawn-daily .dd-table td { padding:5px 1px; print-color-adjust:exact; }
-  body.dd-printing #dawn-daily .dd-table th:first-child { position:static; width:20mm; }
-  body.dd-printing #dawn-daily .dd-table th:last-child,body.dd-printing #dawn-daily .dd-table td:last-child { width:25mm; }
+  body.dd-printing #dawn-daily .dd-table th:first-child { position:static; width:14mm; }
+  body.dd-printing #dawn-daily .dd-table th:last-child,body.dd-printing #dawn-daily .dd-table td:last-child { width:19mm; }
+  body.dd-printing #dawn-daily .dd-note-trigger { overflow:visible; white-space:pre-wrap; overflow-wrap:anywhere; font-size:7pt; }
 }

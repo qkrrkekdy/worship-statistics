@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#234b40">
   <title>인천중앙교회 예배 현황</title>
   <link rel="stylesheet" href="styles.css?v=20260825-2">
-  <link rel="stylesheet" href="dawn-daily.css">
+  <link rel="stylesheet" href="dawn-daily.css?v=20261102-ui">
 </head>
 <body>
   <header class="mobile-header">
@@ -30,11 +30,11 @@
 
   <main class="main-content">
     <section id="dawn-daily" class="page">
-      <div class="page-title"><div><p class="eyebrow">DAWN DAILY ATTENDANCE</p><h1>새벽 일별 현황</h1><p>월별 현장·온라인 출석을 확인하는 연간 조회표입니다.</p></div></div>
-      <div class="panel dd-controls"><label class="filter">연도<select id="dd-year" aria-label="조회 연도"></select></label><button id="dd-refresh" class="secondary-button" type="button">새로고침</button><button id="dd-export" class="primary-button" type="button" disabled>엑셀 다운로드</button><button id="dd-print" class="secondary-button" type="button" disabled>인쇄</button></div>
-      <p id="dd-status" role="status" aria-live="polite"></p>
-      <p class="dd-help">단위: 명 · — 미입력 · 0 실제 0명 · 음영은 미래 날짜 · 일요일은 실제 기록이 있을 때만 표시합니다. 평균은 각 항목에 수치가 기록된 날짜 기준이며 소수 첫째 자리까지 표시합니다. 일별 자료가 없는 기간의 주간 합계는 일별 수치로 환산하지 않습니다.</p>
+      <div class="page-title"><h1>새벽 일별 현황</h1></div>
+      <div class="panel dd-controls"><label class="filter">연도<select id="dd-year" aria-label="조회 연도"></select></label><button id="dd-refresh" class="secondary-button" type="button">새로고침</button><button id="dd-export" class="primary-button" type="button" hidden disabled>엑셀 다운로드</button><button id="dd-print" class="secondary-button" type="button" hidden disabled>인쇄</button></div>
+      <p id="dd-status" role="status" aria-live="polite" hidden></p>
       <div id="dd-months"></div>
+      <dialog id="dd-note-dialog" aria-labelledby="dd-note-title"><h2 id="dd-note-title">비고</h2><p id="dd-note-full"></p><form method="dialog"><button class="secondary-button" type="submit">닫기</button></form></dialog>
     </section>
     <div id="app-data-status" class="data-loading-status" role="status">전체 통계를 불러오는 중…</div>
     <section id="dashboard" class="page active">
@@ -158,7 +158,7 @@
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
-  <script src="app.js?v=20260919-2"></script>
-  <script type="module" src="dawn-daily/page.mjs"></script>
+  <script src="app.js?v=20261102-dd-ui"></script>
+  <script type="module" src="dawn-daily/page.mjs?v=20261102-ui"></script>
 </body>
 </html>

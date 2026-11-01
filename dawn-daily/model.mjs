@@ -16,7 +16,6 @@ export function buildYear(rows, year, today = todayKorea()) {
     for (let day = 1; day <= new Date(Date.UTC(year,m+1,0)).getUTCDate(); day++) {
       const date = `${year}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
       const weekday = new Date(`${date}T00:00:00Z`).getUTCDay(), row = byDate.get(date);
-      if (weekday === 0 && !row) continue;
       const onsite = number(row?.onsite), online = number(row?.online);
       const computed = onsite !== null && online !== null ? onsite + online : null;
       const total = number(row?.total) ?? computed;
@@ -32,9 +31,10 @@ export function buildYear(rows, year, today = todayKorea()) {
 // One cell matrix feeds both the HTML table and the Excel worksheet.
 export function monthMatrix(month, year) {
   return [
-    [`${year}년 ${month.month}월`, ...month.days.map(d=>`${d.day}일${d.sunday?' (예외)':''}${d.future?' (미래)':''}`), '평균'],
+    ['날짜', ...month.days.map(d=>`${d.day}일`), '월평균'],
     ['요일', ...month.days.map(d=>d.weekday), null],
     ...labels.map((label,i)=>[label,...month.days.map(d=>d.values[i]),month.averages[i]]),
-    ['기록 / 비고',...month.days.map(d=>[d.recorded?'기록 있음':'',d.note,d.mismatch?'현장+온라인 불일치: 저장 합계 유지':''].filter(Boolean).join(' · ')||null), `기록 ${month.recordCount}회 / 항목별 ${month.counts.join('/')}회`]
+    // Original notes are preserved, including literal text that could otherwise be mistaken for a marker.
+    ['비고',...month.days.map(d=>d.note||null),null]
   ];
 }

@@ -10,6 +10,8 @@ let fullAttendanceReady = false;
 let recentAttendance = { sunday: null, dawn: [] };
 let recentAttendanceState = 'loading';
 let currentSession = null, isAdmin = false, authReady = false, entryMutationPending = false;
+// Read-only access to the existing administrator decision for the dawn daily page.
+window.WORSHIP_ADMIN_ACCESS = () => authReady && isAdmin && Boolean(currentSession?.user);
 let entryType = 'sunday', yearlyType = 'sunday', compareType = 'sunday';
 const clearedSupplementalSundayRecords = [
   {date:'2026-07-05',onsite1:317,online1:56,onsite2:604,online2:77,afternoon:164,afternoonOnline:23,seed:24,sprout:43,spring:108,vision1:99,vision2:39,youth:72,schoolAfternoon:45,teacherSeed:11,teacherSprout:17,teacherSpring:22,teacherVision1:19,teacherVision2:11,teacherYouth:0,teacherSchoolAfternoon:2,cellGroup:287,wednesdayOnsite:76,wednesdayOnline:19,dawnWeeklyOnsite:698,dawnWeeklyOnline:509,weekdayTotal:1589,weeklyGrandTotal:3260},
@@ -278,11 +280,13 @@ function updateAdminUI() {
   $('admin-session-message').textContent=isAdmin?'출석자료를 입력·수정·삭제할 수 있습니다.':loggedIn?'app_admins에 등록된 관리자 계정이 아닙니다.':'';
   if(isAdmin) renderEntry();
   else resetForm(false);
+  document.dispatchEvent(new Event('worship:admin-state'));
 }
 
 async function syncAuthState(session) {
   currentSession=session;
   isAdmin=false;
+  document.dispatchEvent(new Event('worship:admin-state'));
   setAuthMessage('');
   try {
     if(session) isAdmin=await checkAdminAccess(session);

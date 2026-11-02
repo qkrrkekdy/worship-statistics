@@ -8,7 +8,8 @@ const output=path.join(root,'.site-output');
 export const runtimeFiles=Object.freeze([
   'index.html','app.js','styles.css','supabase-config.js','data/worship-data.json',
   'dawn-daily.css','dawn-daily/model.mjs','dawn-daily/page.mjs','dawn-daily/xlsx.mjs',
-  'analysis/catalog.mjs','analysis/dates.mjs','analysis/reader.mjs','analysis/engine.mjs'
+  'analysis/catalog.mjs','analysis/dates.mjs','analysis/reader.mjs','analysis/engine.mjs',
+  'next-generation.css','next-generation/model.mjs','next-generation/charts.mjs','next-generation/page.mjs'
 ]);
 async function list(dir,prefix='') {
   let entries;

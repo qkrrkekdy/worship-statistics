@@ -7,6 +7,12 @@
 !/styles.css
 !/supabase-config.js
 !/dawn-daily.css
+!/next-generation.css
+!/next-generation/
+/next-generation/*
+!/next-generation/model.mjs
+!/next-generation/charts.mjs
+!/next-generation/page.mjs
 !/analysis/
 /analysis/*
 !/analysis/catalog.mjs
